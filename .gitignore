@@ -1,0 +1,8 @@
+# Ignore backend and frontend build directories
+backend/bin/
+frontend/node_modules/
+frontend/build/
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
