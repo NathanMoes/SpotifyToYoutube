@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  backend:
+    volumes:
+      - ./backend:/app:delegated
+      - /app/vendor
+    environment:
+      - GIN_MODE=debug
+    command: go run main.go
+    
+  frontend:
+    volumes:
+      - ./frontend:/app:delegated
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - REACT_APP_API_URL=http://localhost:8080
+    command: npm start
+    stdin_open: true
+    tty: true
+    
+  neo4j:
+    environment:
+      - NEO4J_dbms_logs_debug_level=INFO

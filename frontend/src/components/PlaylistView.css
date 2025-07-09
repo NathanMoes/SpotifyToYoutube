@@ -1,0 +1,286 @@
+.playlist-view {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.view-header h1 {
+  font-size: 2.5rem;
+  color: #333;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.filter-button {
+  padding: 0.5rem 1rem;
+  border: 2px solid #e5e5e5;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: #666;
+}
+
+.filter-button:hover {
+  border-color: #1db954;
+  color: #1db954;
+}
+
+.filter-button.active {
+  background: #1db954;
+  border-color: #1db954;
+  color: white;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #666;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.playlists-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 2rem;
+}
+
+.playlist-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.playlist-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.playlist-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.playlist-name {
+  font-size: 1.3rem;
+  color: #333;
+  margin: 0;
+  flex: 1;
+  margin-right: 1rem;
+}
+
+.platform-badge {
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.platform-badge.spotify {
+  background: #1db954;
+  color: white;
+}
+
+.platform-badge.youtube {
+  background: #ff0000;
+  color: white;
+}
+
+.playlist-info {
+  margin-bottom: 1.5rem;
+}
+
+.playlist-description {
+  color: #666;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.playlist-stats {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.stat-icon {
+  font-size: 1rem;
+}
+
+.playlist-songs {
+  margin-bottom: 1.5rem;
+}
+
+.playlist-songs h4 {
+  color: #333;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+.songs-list {
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.song-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.song-item:last-child {
+  border-bottom: none;
+}
+
+.song-info {
+  flex: 1;
+}
+
+.song-title {
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 0.2rem;
+}
+
+.song-artist {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.song-duration {
+  color: #999;
+  font-size: 0.9rem;
+  font-family: monospace;
+}
+
+.more-songs {
+  padding: 0.75rem;
+  text-align: center;
+  color: #666;
+  font-style: italic;
+  background: #f8f9fa;
+}
+
+.playlist-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.action-button {
+  flex: 1;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.action-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.action-button.convert {
+  background: #1db954;
+  color: white;
+}
+
+.action-button.convert:hover:not(:disabled) {
+  background: #1ed760;
+}
+
+.action-button.delete {
+  background: #dc3545;
+  color: white;
+}
+
+.action-button.delete:hover:not(:disabled) {
+  background: #c82333;
+}
+
+.playlist-links {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.external-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  text-decoration: none;
+  color: #666;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.external-link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.external-link.spotify {
+  border-color: #1db954;
+  color: #1db954;
+}
+
+.external-link.youtube {
+  border-color: #ff0000;
+  color: #ff0000;
+}
+
+.link-icon {
+  font-size: 1rem;
+}
+
+.loading {
+  text-align: center;
+  padding: 4rem;
+  color: #666;
+  font-size: 1.1rem;
+}
