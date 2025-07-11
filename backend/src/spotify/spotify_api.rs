@@ -203,6 +203,7 @@ impl SpotifyApi {
     }
 
     /// Initialize with existing tokens (useful for restoring from storage)
+    #[allow(dead_code)]
     pub fn with_tokens(
         client_id: String,
         client_secret: String,
@@ -223,6 +224,7 @@ impl SpotifyApi {
     }
 
     /// Initialize with just the authorization code to get initial tokens
+    #[allow(dead_code)]
     pub async fn from_auth_code(
         client_id: String,
         client_secret: String,
@@ -246,6 +248,7 @@ impl SpotifyApi {
         self.access_token = Some(token);
     }
 
+    #[allow(dead_code)]
     pub fn get_access_token(&self) -> Option<&String> {
         self.access_token.as_ref()
     }
@@ -258,10 +261,12 @@ impl SpotifyApi {
         self.refresh_token.as_ref()
     }
 
+    #[allow(dead_code)]
     pub fn set_code(&mut self, code: String) {
         self.code = code;
     }
 
+    #[allow(dead_code)]
     pub fn get_code(&self) -> &String {
         &self.code
     }
@@ -294,6 +299,7 @@ impl SpotifyApi {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn update_access_token(
         &mut self,
     ) -> Result<SpotifyAuthResponse, SpotifyApiError> {
@@ -389,6 +395,7 @@ impl SpotifyApi {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn fetch_user_profile(&mut self) -> Result<serde_json::Value, SpotifyApiError> {
         self.ensure_valid_token().await?;
         
@@ -415,6 +422,7 @@ impl SpotifyApi {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn fetch_user_playlists(&mut self) -> Result<serde_json::Value, SpotifyApiError> {
         self.ensure_valid_token().await?;
         
@@ -470,6 +478,7 @@ impl SpotifyApi {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn fetch_playlist(
         &mut self,
         playlist_id: &str,

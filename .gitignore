@@ -13,3 +13,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Ignore token files
+tokens.json
+backend/tokens.json

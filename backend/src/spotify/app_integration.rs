@@ -1,4 +1,4 @@
-use crate::spotify::spotify_api::{SpotifyApi, TokenState};
+use crate::spotify::spotify_api::{SpotifyApi, SpotifyPlaylistTracks, TokenState};
 use std::env;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -14,6 +14,10 @@ impl AppState {
         let client_id = env::var("SPOTIFY_CLIENT_ID")?;
         let client_secret = env::var("SPOTIFY_CLIENT_SECRET")?;
         let redirect_uri = env::var("SPOTIFY_REDIRECT_URI")?;
+
+        println!("Client ID: {}", client_id);
+        println!("Client Secret: {}", client_secret);
+        println!("Redirect URI: {}", redirect_uri);
 
         // Try to load existing tokens first
         let mut spotify_api = SpotifyApi::new(client_id, client_secret, redirect_uri);
@@ -53,13 +57,14 @@ impl AppState {
         Ok(AppState { spotify_api })
     }
 
+    #[allow(dead_code)]
     pub async fn get_user_playlists(&self) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
         let mut api = self.spotify_api.lock().await;
         let playlists = api.fetch_user_playlists().await?;
         Ok(playlists)
     }
 
-    pub async fn get_playlist_tracks(&self, playlist_id: &str) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+    pub async fn get_playlist_tracks(&self, playlist_id: &str) -> Result<SpotifyPlaylistTracks, Box<dyn std::error::Error>> {
         let mut api = self.spotify_api.lock().await;
         let tracks = api.fetch_playlist_tracks(playlist_id).await?;
         Ok(tracks)
