@@ -1,7 +1,10 @@
 # Ignore backend and frontend build directories
 backend/bin/
+backend/target/
+backend/Cargo.lock
 frontend/node_modules/
 frontend/build/
+
 
 # Ignore OS-specific files
 .DS_Store
