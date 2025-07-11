@@ -567,6 +567,7 @@ dependencies = [
  "tower-sessions",
  "tracing",
  "tracing-subscriber",
+ "urlencoding",
  "utoipa",
  "utoipa-rapidoc",
  "utoipa-redoc",
