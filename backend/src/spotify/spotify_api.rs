@@ -62,6 +62,133 @@ pub struct TokenState {
     pub expires_at: Option<u64>,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SpotifyExternalUrls {
+    pub spotify: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SpotifyImage {
+    pub url: String,
+    pub height: Option<u32>,
+    pub width: Option<u32>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SpotifyUser {
+    pub external_urls: SpotifyExternalUrls,
+    pub href: String,
+    pub id: String,
+    #[serde(rename = "type")]
+    pub user_type: String,
+    pub uri: String,
+    pub display_name: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SpotifyArtist {
+    pub external_urls: SpotifyExternalUrls,
+    pub href: String,
+    pub id: String,
+    pub name: String,
+    #[serde(rename = "type")]
+    pub artist_type: String,
+    pub uri: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SpotifyRestrictions {
+    pub reason: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SpotifyAlbum {
+    pub album_type: String,
+    pub total_tracks: u32,
+    pub available_markets: Vec<String>,
+    pub external_urls: SpotifyExternalUrls,
+    pub href: String,
+    pub id: String,
+    pub images: Vec<SpotifyImage>,
+    pub name: String,
+    pub release_date: String,
+    pub release_date_precision: String,
+    pub restrictions: Option<SpotifyRestrictions>,
+    #[serde(rename = "type")]
+    pub album_type_field: String,
+    pub uri: String,
+    pub artists: Vec<SpotifyArtist>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SpotifyExternalIds {
+    pub isrc: Option<String>,
+    pub ean: Option<String>,
+    pub upc: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SpotifyTrack {
+    pub album: SpotifyAlbum,
+    pub artists: Vec<SpotifyArtist>,
+    pub available_markets: Vec<String>,
+    pub disc_number: u32,
+    pub duration_ms: u32,
+    pub explicit: bool,
+    pub external_ids: SpotifyExternalIds,
+    pub external_urls: SpotifyExternalUrls,
+    pub href: String,
+    pub id: String,
+    pub is_playable: Option<bool>,
+    pub linked_from: Option<serde_json::Value>,
+    pub restrictions: Option<SpotifyRestrictions>,
+    pub name: String,
+    pub popularity: u32,
+    pub preview_url: Option<String>,
+    pub track_number: u32,
+    #[serde(rename = "type")]
+    pub track_type: String,
+    pub uri: String,
+    pub is_local: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SpotifyPlaylistTrackItem {
+    pub added_at: String,
+    pub added_by: SpotifyUser,
+    pub is_local: bool,
+    pub track: SpotifyTrack,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SpotifyPlaylistTracks {
+    pub href: String,
+    pub limit: u32,
+    pub next: Option<String>,
+    pub offset: u32,
+    pub previous: Option<String>,
+    pub total: u32,
+    pub items: Vec<SpotifyPlaylistTrackItem>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SpotifyPlaylist {
+    pub collaborative: bool,
+    pub description: Option<String>,
+    pub external_urls: SpotifyExternalUrls,
+    pub href: String,
+    pub id: String,
+    pub images: Vec<SpotifyImage>,
+    pub name: String,
+    pub owner: SpotifyUser,
+    pub public: bool,
+    pub snapshot_id: String,
+    pub tracks: SpotifyPlaylistTracks,
+    #[serde(rename = "type")]
+    pub playlist_type: String,
+    pub uri: String,
+}
+
 impl SpotifyApi {
     pub fn new(client_id: String, client_secret: String, redirect_uri: String) -> Self {
         SpotifyApi {
@@ -317,7 +444,7 @@ impl SpotifyApi {
     pub async fn fetch_playlist_tracks(
         &mut self,
         playlist_id: &str,
-    ) -> Result<serde_json::Value, SpotifyApiError> {
+    ) -> Result<SpotifyPlaylistTracks, SpotifyApiError> {
         self.ensure_valid_token().await?;
         
         if let Some(token) = &self.access_token {
@@ -329,8 +456,37 @@ impl SpotifyApi {
                 .await?;
 
             if response.status().is_success() {
-                let tracks = response.json::<serde_json::Value>().await?;
+                let tracks = response.json::<SpotifyPlaylistTracks>().await?;
                 Ok(tracks)
+            } else {
+                Err(SpotifyApiError::AuthError(
+                    "Unauthorized access".to_string(),
+                ))
+            }
+        } else {
+            Err(SpotifyApiError::InvalidData(
+                "No access token available".to_string(),
+            ))
+        }
+    }
+
+    pub async fn fetch_playlist(
+        &mut self,
+        playlist_id: &str,
+    ) -> Result<SpotifyPlaylist, SpotifyApiError> {
+        self.ensure_valid_token().await?;
+        
+        if let Some(token) = &self.access_token {
+            let client = reqwest::Client::new();
+            let response = client
+                .get(format!("https://api.spotify.com/v1/playlists/{}", playlist_id))
+                .bearer_auth(token)
+                .send()
+                .await?;
+
+            if response.status().is_success() {
+                let playlist = response.json::<SpotifyPlaylist>().await?;
+                Ok(playlist)
             } else {
                 Err(SpotifyApiError::AuthError(
                     "Unauthorized access".to_string(),
