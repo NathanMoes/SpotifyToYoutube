@@ -1,0 +1,10 @@
+/mnt/c/Users/natha/Documents/SpotifyToYoutube/backend/target/debug/deps/poly1305-8909df9d06555035.d: /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/poly1305-0.7.2/src/lib.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/poly1305-0.7.2/src/backend.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/poly1305-0.7.2/src/backend/avx2.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/poly1305-0.7.2/src/backend/avx2/helpers.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/poly1305-0.7.2/src/backend/autodetect.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/poly1305-0.7.2/src/backend/soft.rs
+
+/mnt/c/Users/natha/Documents/SpotifyToYoutube/backend/target/debug/deps/libpoly1305-8909df9d06555035.rmeta: /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/poly1305-0.7.2/src/lib.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/poly1305-0.7.2/src/backend.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/poly1305-0.7.2/src/backend/avx2.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/poly1305-0.7.2/src/backend/avx2/helpers.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/poly1305-0.7.2/src/backend/autodetect.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/poly1305-0.7.2/src/backend/soft.rs
+
+/home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/poly1305-0.7.2/src/lib.rs:
+/home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/poly1305-0.7.2/src/backend.rs:
+/home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/poly1305-0.7.2/src/backend/avx2.rs:
+/home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/poly1305-0.7.2/src/backend/avx2/helpers.rs:
+/home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/poly1305-0.7.2/src/backend/autodetect.rs:
+/home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/poly1305-0.7.2/src/backend/soft.rs:

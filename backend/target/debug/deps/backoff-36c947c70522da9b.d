@@ -1,0 +1,12 @@
+/mnt/c/Users/natha/Documents/SpotifyToYoutube/backend/target/debug/deps/backoff-36c947c70522da9b.d: /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backoff-0.4.0/src/lib.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backoff-0.4.0/src/backoff.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backoff-0.4.0/src/clock.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backoff-0.4.0/src/default.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backoff-0.4.0/src/error.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backoff-0.4.0/src/exponential.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backoff-0.4.0/src/future.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backoff-0.4.0/src/retry.rs
+
+/mnt/c/Users/natha/Documents/SpotifyToYoutube/backend/target/debug/deps/libbackoff-36c947c70522da9b.rmeta: /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backoff-0.4.0/src/lib.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backoff-0.4.0/src/backoff.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backoff-0.4.0/src/clock.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backoff-0.4.0/src/default.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backoff-0.4.0/src/error.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backoff-0.4.0/src/exponential.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backoff-0.4.0/src/future.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backoff-0.4.0/src/retry.rs
+
+/home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backoff-0.4.0/src/lib.rs:
+/home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backoff-0.4.0/src/backoff.rs:
+/home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backoff-0.4.0/src/clock.rs:
+/home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backoff-0.4.0/src/default.rs:
+/home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backoff-0.4.0/src/error.rs:
+/home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backoff-0.4.0/src/exponential.rs:
+/home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backoff-0.4.0/src/future.rs:
+/home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backoff-0.4.0/src/retry.rs:

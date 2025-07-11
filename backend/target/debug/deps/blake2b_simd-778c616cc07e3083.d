@@ -1,0 +1,11 @@
+/mnt/c/Users/natha/Documents/SpotifyToYoutube/backend/target/debug/deps/blake2b_simd-778c616cc07e3083.d: /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/blake2b_simd-1.0.3/src/lib.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/blake2b_simd-1.0.3/src/avx2.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/blake2b_simd-1.0.3/src/portable.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/blake2b_simd-1.0.3/src/sse41.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/blake2b_simd-1.0.3/src/blake2bp.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/blake2b_simd-1.0.3/src/guts.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/blake2b_simd-1.0.3/src/many.rs
+
+/mnt/c/Users/natha/Documents/SpotifyToYoutube/backend/target/debug/deps/libblake2b_simd-778c616cc07e3083.rmeta: /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/blake2b_simd-1.0.3/src/lib.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/blake2b_simd-1.0.3/src/avx2.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/blake2b_simd-1.0.3/src/portable.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/blake2b_simd-1.0.3/src/sse41.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/blake2b_simd-1.0.3/src/blake2bp.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/blake2b_simd-1.0.3/src/guts.rs /home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/blake2b_simd-1.0.3/src/many.rs
+
+/home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/blake2b_simd-1.0.3/src/lib.rs:
+/home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/blake2b_simd-1.0.3/src/avx2.rs:
+/home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/blake2b_simd-1.0.3/src/portable.rs:
+/home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/blake2b_simd-1.0.3/src/sse41.rs:
+/home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/blake2b_simd-1.0.3/src/blake2bp.rs:
+/home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/blake2b_simd-1.0.3/src/guts.rs:
+/home/nathan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/blake2b_simd-1.0.3/src/many.rs:

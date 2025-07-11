@@ -1,0 +1,1 @@
+cargo:rustc-env=MIME_TYPES_GENERATED_PATH=/mnt/c/Users/natha/Documents/SpotifyToYoutube/backend/target/debug/build/mime_guess-2d5218c106abd740/out/mime_types_generated.rs
