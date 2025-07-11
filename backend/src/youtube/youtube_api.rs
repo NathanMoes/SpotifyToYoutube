@@ -128,7 +128,7 @@ impl Default for YouTubeSearchParams {
     fn default() -> Self {
         Self {
             query: String::new(),
-            max_results: Some(25),
+            max_results: Some(3),
             order: Some("relevance".to_string()),
             published_after: None,
             published_before: None,
@@ -226,7 +226,7 @@ impl YouTubeApi {
     pub async fn search_videos_simple(&self, query: &str, max_results: Option<u32>) -> Result<YouTubeSearchListResponse, YouTubeApiError> {
         let params = YouTubeSearchParams {
             query: query.to_string(),
-            max_results: max_results.or(Some(10)),
+            max_results: max_results.or(Some(3)),
             ..Default::default()
         };
 

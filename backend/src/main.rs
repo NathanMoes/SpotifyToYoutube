@@ -3,6 +3,7 @@ use std::env;
 // Declare modules
 mod spotify;
 mod auth;
+mod youtube;
 
 use spotify::app_integration::AppState;
 use auth::AuthHandler;
@@ -12,6 +13,21 @@ async fn main() {
     // Initialize environment variables from .env file
     dotenv::dotenv().ok();
     env_logger::init();
+
+
+    let youtube_state = youtube::app_integration::YouTubeAppState::new().await;
+    let youtube_state = match youtube_state {
+        Ok(state) => {
+            println!("YouTube AppState initialized successfully!");
+            state
+        }
+        Err(e) => {
+            eprintln!("❌ Failed to initialize YouTube AppState: {:?}", e);
+            return;
+        }
+    };
+    let result = youtube_state.search_videos("Rust programming", Some(3)).await.unwrap();
+    println!("🔍 YouTube Search Results: {:?}", result.items);
 
     // Initialize the AppState
     match AppState::new().await {

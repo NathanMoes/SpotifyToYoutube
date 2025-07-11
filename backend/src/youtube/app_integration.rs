@@ -33,3 +33,33 @@ impl YouTubeAppState {
         Ok(results)
     }
 }
+
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use tokio;
+//     use std::env;
+//     use std::sync::Arc;
+//     use tokio::sync::Mutex;
+
+//     #[tokio::test]
+//     async fn test_youtube_search() {
+//         dotenv::dotenv().ok();
+//         let api_key = env::var("YOUTUBE_API_KEY").expect("YOUTUBE_API_KEY not set");
+//         println!("Using YouTube API Key: {}", api_key);
+//         let youtube_api = YouTubeApi::new(api_key);
+//         let youtube_api = Arc::new(Mutex::new(youtube_api));
+//         let app_state = YouTubeAppState { youtube_api };
+//         let query = "Rust programming";
+//         let max_results = Some(3);
+//         match app_state.search_videos(query, max_results).await {
+//             Ok(response) => {
+//                 assert!(!response.items.is_empty(), "Expected non-empty search results");
+//                 dbg!(response.items);
+//             }
+//             Err(e) => {
+//                 panic!("Failed to search videos: {:?}", e);
+//             }
+//         }
+//     }
+// }
