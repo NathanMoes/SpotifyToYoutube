@@ -3,6 +3,47 @@
 version = 4
 
 [[package]]
+name = "SpotifyToYoutube_backend"
+version = "0.1.0"
+dependencies = [
+ "actix-web",
+ "askama",
+ "askama_axum",
+ "axum",
+ "axum-extra",
+ "chrono",
+ "clap",
+ "dotenv",
+ "env_logger",
+ "fastrand",
+ "jsonwebtoken",
+ "log",
+ "log4rs",
+ "paseto",
+ "rand 0.8.5",
+ "reqwest",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "rust-argon2",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "sqlx-cli",
+ "thiserror 1.0.69",
+ "tokio",
+ "tower-http",
+ "tower-sessions",
+ "tracing",
+ "tracing-subscriber",
+ "urlencoding",
+ "utoipa",
+ "utoipa-rapidoc",
+ "utoipa-redoc",
+ "utoipa-swagger-ui",
+ "uuid 0.8.2",
+]
+
+[[package]]
 name = "actix-codec"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -532,47 +573,6 @@ dependencies = [
  "tower 0.5.2",
  "tower-layer",
  "tower-service",
-]
-
-[[package]]
-name = "backend"
-version = "0.1.0"
-dependencies = [
- "actix-web",
- "askama",
- "askama_axum",
- "axum",
- "axum-extra",
- "chrono",
- "clap",
- "dotenv",
- "env_logger",
- "fastrand",
- "jsonwebtoken",
- "log",
- "log4rs",
- "paseto",
- "rand 0.8.5",
- "reqwest",
- "reqwest-middleware",
- "reqwest-retry",
- "rust-argon2",
- "serde",
- "serde_json",
- "sqlx",
- "sqlx-cli",
- "thiserror 1.0.69",
- "tokio",
- "tower-http",
- "tower-sessions",
- "tracing",
- "tracing-subscriber",
- "urlencoding",
- "utoipa",
- "utoipa-rapidoc",
- "utoipa-redoc",
- "utoipa-swagger-ui",
- "uuid 0.8.2",
 ]
 
 [[package]]
