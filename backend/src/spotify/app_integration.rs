@@ -1,12 +1,17 @@
 use crate::spotify::spotify_api::{SpotifyApi, SpotifyPlaylistTracks, TokenState};
+use crate::music_service::MusicDataService;
+use crate::conversion_service::ConversionService;
 use std::env;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
 // Example integration into your main application
 
+#[derive(Clone)]
 pub struct AppState {
     pub spotify_api: Arc<Mutex<SpotifyApi>>,
+    pub music_service: Arc<MusicDataService>,
+    pub conversion_service: Arc<ConversionService>,
 }
 
 impl AppState {
@@ -54,7 +59,28 @@ impl AppState {
             }
         });
 
-        Ok(AppState { spotify_api })
+        // Initialize music service
+        let music_service = match MusicDataService::new().await {
+            Ok(service) => Arc::new(service),
+            Err(e) => {
+                eprintln!("Warning: Failed to initialize music service: {:?}", e);
+                eprintln!("Make sure Neo4j is running and accessible");
+                return Err(format!("Database connection failed: {:?}", e).into());
+            }
+        };
+
+        // Initialize conversion service
+        let conversion_service = Arc::new(ConversionService::new(music_service.clone()));
+        
+        // Start background conversion
+        conversion_service.start_background_conversion().await;
+        println!("🔄 Background conversion service started");
+
+        Ok(AppState { 
+            spotify_api,
+            music_service,
+            conversion_service,
+        })
     }
 
     #[allow(dead_code)]
@@ -87,5 +113,58 @@ impl AppState {
     pub async fn get_auth_url(&self) -> String {
         let api = self.spotify_api.lock().await;
         api.get_auth_url()
+    }
+
+    // Database integration methods
+    pub async fn store_playlist_in_database(&self, playlist_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+        // First get the playlist tracks from Spotify
+        let tracks = self.get_playlist_tracks(playlist_id).await?;
+        
+        // Get playlist metadata (you might need to implement this in SpotifyApi)
+        let playlist_info = self.get_playlist_info(playlist_id).await?;
+        
+        // Store in database
+        self.music_service.store_playlist_data(
+            playlist_id,
+            &playlist_info["name"].as_str().unwrap_or("Unknown Playlist"),
+            playlist_info["description"].as_str().map(|s| s.to_string()),
+            &playlist_info["uri"].as_str().unwrap_or(""),
+            &playlist_info["owner"]["id"].as_str().unwrap_or(""),
+            &playlist_info["owner"]["display_name"].as_str().unwrap_or("Unknown User"),
+            playlist_info["public"].as_bool().unwrap_or(false),
+            playlist_info["collaborative"].as_bool().unwrap_or(false),
+            &playlist_info["snapshot_id"].as_str().unwrap_or(""),
+            &tracks,
+        ).await?;
+
+        println!("✅ Stored playlist {} in database with {} tracks", playlist_id, tracks.items.len());
+        Ok(())
+    }
+
+    pub async fn get_playlist_info(&self, playlist_id: &str) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+        let mut api = self.spotify_api.lock().await;
+        let playlist = api.fetch_playlist(playlist_id).await?;
+        let playlist_json = serde_json::to_value(playlist)?;
+        Ok(playlist_json)
+    }
+
+    pub async fn get_tracks_for_conversion(&self, limit: i64) -> Result<Vec<crate::database::DatabaseTrack>, Box<dyn std::error::Error>> {
+        let tracks = self.music_service.get_tracks_for_conversion(limit).await?;
+        Ok(tracks)
+    }
+
+    pub async fn update_track_youtube_url(&self, track_id: &str, youtube_url: &str) -> Result<(), Box<dyn std::error::Error>> {
+        self.music_service.update_track_youtube_url(track_id, youtube_url).await?;
+        Ok(())
+    }
+
+    pub async fn get_playlist_tracks_with_youtube(&self, playlist_id: &str) -> Result<Vec<(crate::database::DatabaseTrack, i64)>, Box<dyn std::error::Error>> {
+        let tracks = self.music_service.get_playlist_tracks_with_youtube(playlist_id).await?;
+        Ok(tracks)
+    }
+
+    pub async fn search_tracks_in_database(&self, name: &str, limit: i64) -> Result<Vec<crate::database::DatabaseTrack>, Box<dyn std::error::Error>> {
+        let tracks = self.music_service.search_tracks(name, limit).await?;
+        Ok(tracks)
     }
 }

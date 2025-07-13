@@ -1,0 +1,11 @@
+.git/
+.gitignore
+README.md
+.env
+*.md
+start.sh
+stop.sh
+backend/target/
+frontend/target/
+frontend/pkg/
+frontend/node_modules/
