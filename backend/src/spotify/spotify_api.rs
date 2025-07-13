@@ -467,8 +467,10 @@ impl SpotifyApi {
                 let tracks = response.json::<SpotifyPlaylistTracks>().await?;
                 Ok(tracks)
             } else {
+                let status = response.status();
+                let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
                 Err(SpotifyApiError::AuthError(
-                    "Unauthorized access".to_string(),
+                    format!("The client is unauthorized due to authentication failure. Status: {}, Error: {}", status, error_text),
                 ))
             }
         } else {
@@ -497,8 +499,10 @@ impl SpotifyApi {
                 let playlist = response.json::<SpotifyPlaylist>().await?;
                 Ok(playlist)
             } else {
+                let status = response.status();
+                let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
                 Err(SpotifyApiError::AuthError(
-                    "Unauthorized access".to_string(),
+                    format!("The client is unauthorized due to authentication failure. Status: {}, Error: {}", status, error_text),
                 ))
             }
         } else {

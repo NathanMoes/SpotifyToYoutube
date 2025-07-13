@@ -37,6 +37,10 @@ Run the startup script:
 ./start.sh
 ```
 
+wasm-pack build --target web --out-dir pkg
+basic-http-server . (frontend)
+cargo run -r  (backend)
+
 Or use Docker Compose directly:
 
 ```bash
@@ -125,7 +129,61 @@ Once the backend is running, you can access API documentation at:
 - Modern web interface built with Rust and WebAssembly
 - RESTful API for integration with other services
 
-## 🔧 Troubleshooting
+## � Logging and Monitoring
+
+The backend includes comprehensive logging and tracing capabilities for monitoring performance and troubleshooting issues.
+
+### Features
+
+- **Request/Response Tracking**: Every HTTP request is logged with timing, status codes, and unique request IDs
+- **Performance Monitoring**: Automatic detection of slow requests (>1 second)
+- **Structured Logging**: JSON output for production environments
+- **Error Context**: Detailed error information with full context
+- **Database Query Tracking**: Performance monitoring for Neo4j operations
+
+### Configuration
+
+Configure logging in your `.env` file:
+
+```bash
+# Log level (trace, debug, info, warn, error)
+RUST_LOG=info,spotify_to_youtube_backend=debug
+
+# JSON format for production (leave empty for human-readable)
+LOG_FORMAT=json
+```
+
+### Example Log Output
+
+```bash
+# Request tracking
+INFO HTTP request started method="POST" uri="/api/playlists/123/store" request_id="abc-123"
+INFO Successfully stored playlist in database playlist_id="123"
+INFO HTTP request completed status="200" latency_ms="156"
+
+# Performance monitoring  
+WARN Slow request detected latency_ms="1234" status="200"
+
+# Error tracking
+ERROR Failed to store playlist error="Database connection timeout" playlist_id="123"
+```
+
+### Viewing Logs
+
+```bash
+# Real-time backend logs
+docker-compose logs -f backend
+
+# Search for errors
+docker-compose logs backend | grep ERROR
+
+# Monitor slow requests
+docker-compose logs backend | grep "Slow request"
+```
+
+For detailed logging configuration and analysis, see [backend/LOGGING_README.md](backend/LOGGING_README.md).
+
+## �🔧 Troubleshooting
 
 ### Common Issues
 
@@ -133,7 +191,7 @@ Once the backend is running, you can access API documentation at:
 2. **API authentication errors**: Verify your Spotify and YouTube API credentials in the `.env` file
 3. **Database connection issues**: Wait for Neo4j to fully start up (check logs with `docker-compose logs neo4j`)
 
-### Viewing Logs
+### Service Logs
 
 ```bash
 # View all service logs

@@ -200,4 +200,44 @@ impl MusicDataService {
             total_tracks: spotify_album.total_tracks,
         }
     }
+
+    /// Add a manually entered track (not from Spotify)
+    pub async fn add_manual_track(
+        &self, 
+        track_id: &str, 
+        track_name: &str, 
+        artist_name: &str
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        // Create a manual artist entry
+        let artist_id = format!("manual_artist_{}", uuid::Uuid::new_v4());
+        let artist = DatabaseArtist {
+            id: artist_id.clone(),
+            name: artist_name.to_string(),
+            spotify_uri: "".to_string(), // Empty for manual entries
+            external_urls: "{}".to_string(),
+        };
+        
+        self.db.create_or_update_artist(&artist).await?;
+
+        // Create a manual track entry
+        let track = DatabaseTrack {
+            id: track_id.to_string(),
+            name: track_name.to_string(),
+            spotify_uri: "".to_string(), // Empty for manual entries
+            duration_ms: 0, // Unknown for manual entries
+            explicit: false,
+            popularity: 0, // Unknown for manual entries
+            preview_url: None,
+            external_urls: "{}".to_string(),
+            youtube_url: None,
+            isrc: None,
+        };
+
+        self.db.create_or_update_track(&track).await?;
+
+        // Create the relationship between track and artist
+        self.db.link_track_to_artist(track_id, &artist_id).await?;
+
+        Ok(())
+    }
 }

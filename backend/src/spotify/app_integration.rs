@@ -167,4 +167,43 @@ impl AppState {
         let tracks = self.music_service.search_tracks(name, limit).await?;
         Ok(tracks)
     }
+
+    // Extract playlist ID from Spotify URL
+    pub fn extract_playlist_id_from_url(url: &str) -> Result<String, Box<dyn std::error::Error>> {
+        // Handle various Spotify URL formats:
+        // https://open.spotify.com/playlist/4rF3u0qfg9m4X1WSQJ
+        // https://open.spotify.com/playlist/4rF3u0qfg9m4X1WSQJ?si=...
+        // spotify:playlist:4rF3u0qfg9m4X1WSQJ
+        
+        if let Some(captures) = regex::Regex::new(r"playlist[/:]([\w\d]+)")?.captures(url) {
+            if let Some(playlist_id) = captures.get(1) {
+                return Ok(playlist_id.as_str().to_string());
+            }
+        }
+        
+        Err("Invalid Spotify playlist URL".into())
+    }
+
+    pub async fn import_playlist_by_url(&self, url: &str) -> Result<(String, usize), Box<dyn std::error::Error>> {
+        let playlist_id = Self::extract_playlist_id_from_url(url)?;
+        
+        // Store the playlist in the database
+        self.store_playlist_in_database(&playlist_id).await?;
+        
+        // Get tracks count for response
+        let tracks = self.get_playlist_tracks(&playlist_id).await?;
+        
+        Ok((playlist_id, tracks.items.len()))
+    }
+
+    pub async fn add_track(&self, track_name: &str, artist_name: &str) -> Result<String, Box<dyn std::error::Error>> {
+        // This would search for the track on Spotify and add it to a default playlist or user's collection
+        // For now, let's create a simple implementation that adds it to the database
+        let track_id = format!("manual_{}", uuid::Uuid::new_v4());
+        
+        // You would implement this method in music_service to add individual tracks
+        self.music_service.add_manual_track(&track_id, track_name, artist_name).await?;
+        
+        Ok(track_id)
+    }
 }

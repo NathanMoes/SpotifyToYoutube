@@ -4,11 +4,11 @@
 		{
 			"label": "Start Backend",
 			"type": "shell",
-			"command": "cd backend && go run main.go",
+			"command": "cd backend && cargo run",
 			"group": "build",
 			"isBackground": true,
 			"problemMatcher": [
-				"$go"
+				"$rustc"
 			]
 		}
 	]

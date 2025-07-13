@@ -7,6 +7,46 @@ This application uses Neo4j as its graph database to store relationships between
 1. **Neo4j Database**: You need a running Neo4j instance
 2. **Environment Variables**: Properly configured database connection
 
+## Logging and Monitoring
+
+The backend includes comprehensive logging for monitoring database operations and performance:
+
+### Configuration
+
+Set logging levels in your `.env` file:
+
+```bash
+# Log levels: trace, debug, info, warn, error
+RUST_LOG=info,spotify_to_youtube_backend=debug
+
+# JSON format for production
+LOG_FORMAT=json
+```
+
+### Features
+
+- **Database Query Tracking**: All Neo4j operations are logged with timing
+- **Error Context**: Detailed error information with query context
+- **Performance Monitoring**: Slow database operations are flagged
+- **Request Tracing**: Each API request has a unique ID for tracing through database operations
+
+### Example Logs
+
+```bash
+# Database operations
+INFO  Storing playlist in database playlist_id="441K4rF3u0qfg9m4X1WSQJ"
+DEBUG Executing Neo4j query: MERGE (p:Playlist {id: $playlist_id})...
+INFO  Successfully stored playlist in database
+
+# Performance monitoring
+WARN  Slow database operation detected query_time_ms="1234"
+
+# Error tracking
+ERROR Failed to store playlist error="Connection timeout" playlist_id="123"
+```
+
+For detailed logging documentation, see [LOGGING_README.md](LOGGING_README.md).
+
 ## Neo4j Installation
 
 ### Option 1: Docker (Recommended)

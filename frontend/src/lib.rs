@@ -4,6 +4,7 @@ use yew_router::prelude::*;
 
 mod components;
 mod pages;
+mod services;
 
 use components::footer::Footer;
 use components::header::Header;
