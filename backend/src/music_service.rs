@@ -138,6 +138,11 @@ impl MusicDataService {
         self.db.find_track_by_isrc(isrc).await
     }
 
+    /// Get artists for a specific track
+    pub async fn get_track_artists(&self, track_id: &str) -> Result<Vec<DatabaseArtist>, Box<dyn std::error::Error>> {
+        self.db.get_track_artists(track_id).await
+    }
+
     /// Get database statistics
     pub async fn get_stats(&self) -> Result<MusicDatabaseStats, Box<dyn std::error::Error>> {
         // This would involve multiple queries to get counts

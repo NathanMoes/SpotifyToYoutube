@@ -152,15 +152,41 @@ impl ConversionService {
 
     /// Search YouTube using the real YouTube Data API
     async fn search_youtube_real_api(&self, youtube_api: &YouTubeApi, track: &DatabaseTrack) -> Result<String, Box<dyn std::error::Error>> {
-        // Create search query - prioritize track name and first artist
-        let query = format!("{} {}", track.name, 
-            // You might want to extract artist names from external_urls or add artists field to DatabaseTrack
-            track.name // For now, just use track name twice for better matching
+        // Get artist information for better search results
+        let artists = self.music_service.get_track_artists(&track.id).await
+            .unwrap_or_else(|e| {
+                warn!(track_id = %track.id, error = %e, "Failed to get track artists");
+                Vec::new()
+            });
+
+        // Create search query with track name and artist(s)
+        let query = if !artists.is_empty() {
+            let artist_names: Vec<&str> = artists.iter().map(|a| a.name.as_str()).collect();
+            let primary_artist = artist_names.first().unwrap_or(&"");
+            
+            // Use track name + primary artist for best results
+            format!("{} {}", track.name, primary_artist)
+        } else {
+            // Fallback: try to extract artist from Spotify URI or use track name only
+            if !track.spotify_uri.is_empty() {
+                // If we have Spotify URI, we can try to use it for context
+                format!("{} official", track.name)
+            } else {
+                track.name.clone()
+            }
+        };
+
+        debug!(
+            track_id = %track.id,
+            track_name = %track.name,
+            search_query = %query,
+            artist_count = artists.len(),
+            "🔍 Searching YouTube with optimized query"
         );
 
         let search_params = YouTubeSearchParams {
             query,
-            max_results: Some(3), // Get top 3 results for better matching
+            max_results: Some(5), // Get more results for better matching
             order: Some("relevance".to_string()),
             video_duration: Some("medium".to_string()), // Prefer songs over long videos
             ..Default::default()
@@ -173,8 +199,8 @@ impl ConversionService {
             return Err("No YouTube videos found for this track".into());
         }
 
-        // Take the first (most relevant) result
-        let best_match = &search_response.items[0];
+        // Find the best match by analyzing titles
+        let best_match = self.find_best_youtube_match(&search_response.items, track, &artists)?;
         
         if let Some(video_id) = &best_match.id.video_id {
             let youtube_url = format!("https://www.youtube.com/watch?v={}", video_id);
@@ -184,7 +210,8 @@ impl ConversionService {
                 youtube_title = %best_match.snippet.title,
                 youtube_channel = %best_match.snippet.channel_title,
                 youtube_url = %youtube_url,
-                "🎯 Found YouTube match"
+                artist_names = ?artists.iter().map(|a| &a.name).collect::<Vec<_>>(),
+                "🎯 Found optimized YouTube match"
             );
             
             Ok(youtube_url)
@@ -193,10 +220,89 @@ impl ConversionService {
         }
     }
 
+    /// Find the best YouTube match from search results by analyzing titles and channels
+    fn find_best_youtube_match<'a>(
+        &self,
+        search_items: &'a [crate::youtube::youtube_api::YouTubeSearchResult],
+        track: &DatabaseTrack,
+        artists: &[crate::database::DatabaseArtist],
+    ) -> Result<&'a crate::youtube::youtube_api::YouTubeSearchResult, Box<dyn std::error::Error>> {
+        let track_name_lower = track.name.to_lowercase();
+        let artist_names_lower: Vec<String> = artists.iter()
+            .map(|a| a.name.to_lowercase())
+            .collect();
+
+        let mut best_score = 0;
+        let mut best_index = 0;
+
+        for (index, item) in search_items.iter().enumerate() {
+            let title_lower = item.snippet.title.to_lowercase();
+            let channel_lower = item.snippet.channel_title.to_lowercase();
+            
+            let mut score = 0;
+
+            // Score based on track name match in title
+            if title_lower.contains(&track_name_lower) {
+                score += 100;
+            }
+
+            // Score based on artist name match in title or channel
+            for artist_name in &artist_names_lower {
+                if title_lower.contains(artist_name) {
+                    score += 80;
+                }
+                if channel_lower.contains(artist_name) {
+                    score += 60; // Channel name match is good but not as strong as title
+                }
+            }
+
+            // Prefer official channels and verified accounts
+            if channel_lower.contains("official") {
+                score += 20;
+            }
+            if channel_lower.contains("vevo") {
+                score += 15;
+            }
+
+            // Slight preference for first results (they're already relevance-sorted)
+            score += (search_items.len() - index) * 2;
+
+            debug!(
+                youtube_title = %item.snippet.title,
+                youtube_channel = %item.snippet.channel_title,
+                match_score = score,
+                "Evaluating YouTube search result"
+            );
+
+            if score > best_score {
+                best_score = score;
+                best_index = index;
+            }
+        }
+
+        if best_score == 0 {
+            warn!("No good matches found, using first result");
+        }
+
+        Ok(&search_items[best_index])
+    }
+
     /// Mock YouTube search (fallback when no API key is available)
     async fn search_youtube_mock(&self, track: &DatabaseTrack) -> Result<String, Box<dyn std::error::Error>> {
-        // Create a deterministic but varied mock URL based on track data
-        let search_query = format!("{}", track.name);
+        // Get artist information for more realistic mock URLs
+        let artists = self.music_service.get_track_artists(&track.id).await
+            .unwrap_or_else(|e| {
+                warn!(track_id = %track.id, error = %e, "Failed to get track artists for mock");
+                Vec::new()
+            });
+
+        // Create a deterministic but varied mock URL based on track data and artists
+        let search_query = if !artists.is_empty() {
+            format!("{} {}", track.name, artists[0].name)
+        } else {
+            track.name.clone()
+        };
+        
         let mock_video_id = format!("{:x}", md5::compute(search_query.as_bytes()));
         let youtube_url = format!("https://www.youtube.com/watch?v={}", &mock_video_id[0..11]);
         
@@ -205,8 +311,9 @@ impl ConversionService {
         
         debug!(
             track_name = %track.name,
+            artist_names = ?artists.iter().map(|a| &a.name).collect::<Vec<_>>(),
             mock_youtube_url = %youtube_url,
-            "🎭 Generated mock YouTube URL"
+            "🎭 Generated enhanced mock YouTube URL"
         );
         
         Ok(youtube_url)

@@ -402,6 +402,32 @@ impl DatabaseManager {
         Ok(tracks)
     }
 
+    /// Get artists for a specific track
+    pub async fn get_track_artists(&self, track_id: &str) -> Result<Vec<DatabaseArtist>, Box<dyn std::error::Error>> {
+        let query = Query::new(
+            "MATCH (a:Artist)-[:PERFORMED]->(t:Track {id: $track_id})
+             RETURN a".to_string()
+        )
+        .param("track_id", track_id.to_string());
+
+        let mut result = self.graph.execute(query).await.map_err(|e| format!("Failed to get track artists: {}", e))?;
+        let mut artists = Vec::new();
+
+        while let Some(row) = result.next().await.map_err(|e| format!("Failed to process query result: {}", e))? {
+            if let Ok(node) = row.get::<neo4rs::Node>("a") {
+                let artist = DatabaseArtist {
+                    id: node.get::<String>("id").unwrap_or_default(),
+                    name: node.get::<String>("name").unwrap_or_default(),
+                    spotify_uri: node.get::<String>("spotify_uri").unwrap_or_default(),
+                    external_urls: node.get::<String>("external_urls").unwrap_or_default(),
+                };
+                artists.push(artist);
+            }
+        }
+
+        Ok(artists)
+    }
+
     pub async fn get_conversion_stats(&self) -> Result<(u64, u64, u64), Box<dyn std::error::Error>> {
         // Get total tracks
         let total_query = Query::new("MATCH (t:Track) RETURN count(t) as total".to_string());
