@@ -432,4 +432,72 @@ impl DatabaseManager {
 
         Ok((total_tracks, converted_tracks, pending_tracks))
     }
+
+    /// Get all playlists from the database
+    pub async fn get_all_playlists(&self, limit: i64, offset: i64) -> Result<Vec<DatabasePlaylist>, Box<dyn std::error::Error>> {
+        let query = Query::new(
+            "MATCH (p:Playlist)
+             RETURN p
+             ORDER BY p.name
+             SKIP $offset
+             LIMIT $limit".to_string()
+        )
+        .param("limit", limit)
+        .param("offset", offset);
+
+        let mut result = self.graph.execute(query).await.map_err(|e| format!("Failed to get playlists: {}", e))?;
+        let mut playlists = Vec::new();
+
+        while let Ok(Some(row)) = result.next().await {
+            let node: neo4rs::Node = row.get("p").map_err(|e| format!("Failed to get playlist node: {}", e))?;
+            
+            let playlist = DatabasePlaylist {
+                id: node.get::<String>("id").map_err(|e| format!("Failed to get playlist id: {}", e))?,
+                name: node.get::<String>("name").map_err(|e| format!("Failed to get playlist name: {}", e))?,
+                description: node.get::<Option<String>>("description").map_err(|e| format!("Failed to get playlist description: {}", e))?,
+                spotify_uri: node.get::<String>("spotify_uri").map_err(|e| format!("Failed to get playlist spotify_uri: {}", e))?,
+                owner_id: node.get::<String>("owner_id").map_err(|e| format!("Failed to get playlist owner_id: {}", e))?,
+                owner_display_name: node.get::<String>("owner_display_name").map_err(|e| format!("Failed to get playlist owner_display_name: {}", e))?,
+                public: node.get::<bool>("public").map_err(|e| format!("Failed to get playlist public: {}", e))?,
+                collaborative: node.get::<bool>("collaborative").map_err(|e| format!("Failed to get playlist collaborative: {}", e))?,
+                snapshot_id: node.get::<String>("snapshot_id").map_err(|e| format!("Failed to get playlist snapshot_id: {}", e))?,
+                total_tracks: node.get::<i64>("total_tracks").map_err(|e| format!("Failed to get playlist total_tracks: {}", e))? as u32,
+            };
+            playlists.push(playlist);
+        }
+
+        Ok(playlists)
+    }
+
+    /// Get a specific playlist from the database  
+    pub async fn get_playlist(&self, playlist_id: &str) -> Result<DatabasePlaylist, Box<dyn std::error::Error>> {
+        let query = Query::new(
+            "MATCH (p:Playlist {id: $playlist_id})
+             RETURN p".to_string()
+        )
+        .param("playlist_id", playlist_id.to_string());
+
+        let mut result = self.graph.execute(query).await.map_err(|e| format!("Failed to get playlist: {}", e))?;
+
+        if let Ok(Some(row)) = result.next().await {
+            let node: neo4rs::Node = row.get("p").map_err(|e| format!("Failed to get playlist node: {}", e))?;
+            
+            let playlist = DatabasePlaylist {
+                id: node.get::<String>("id").map_err(|e| format!("Failed to get playlist id: {}", e))?,
+                name: node.get::<String>("name").map_err(|e| format!("Failed to get playlist name: {}", e))?,
+                description: node.get::<Option<String>>("description").map_err(|e| format!("Failed to get playlist description: {}", e))?,
+                spotify_uri: node.get::<String>("spotify_uri").map_err(|e| format!("Failed to get playlist spotify_uri: {}", e))?,
+                owner_id: node.get::<String>("owner_id").map_err(|e| format!("Failed to get playlist owner_id: {}", e))?,
+                owner_display_name: node.get::<String>("owner_display_name").map_err(|e| format!("Failed to get playlist owner_display_name: {}", e))?,
+                public: node.get::<bool>("public").map_err(|e| format!("Failed to get playlist public: {}", e))?,
+                collaborative: node.get::<bool>("collaborative").map_err(|e| format!("Failed to get playlist collaborative: {}", e))?,
+                snapshot_id: node.get::<String>("snapshot_id").map_err(|e| format!("Failed to get playlist snapshot_id: {}", e))?,
+                total_tracks: node.get::<i64>("total_tracks").map_err(|e| format!("Failed to get playlist total_tracks: {}", e))? as u32,
+            };
+            
+            Ok(playlist)
+        } else {
+            Err(format!("Playlist not found: {}", playlist_id).into())
+        }
+    }
 }

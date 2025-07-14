@@ -1,6 +1,6 @@
 use std::env;
 use axum::{
-    extract::State,
+    extract::{State, Path, Query},
     http::StatusCode,
     response::Json,
     routing::{get, post, put},
@@ -69,7 +69,7 @@ async fn api_status(State(_app_state): State<AppState>) -> (StatusCode, Json<Val
 #[instrument(skip(app_state), fields(playlist_id = %playlist_id))]
 async fn store_playlist(
     State(app_state): State<AppState>,
-    axum::extract::Path(playlist_id): axum::extract::Path<String>,
+    Path(playlist_id): Path<String>,
 ) -> (StatusCode, Json<Value>) {
     info!("Storing playlist in database");
     
@@ -101,7 +101,7 @@ async fn store_playlist(
 #[instrument(skip(app_state))]
 async fn get_tracks_for_conversion(
     State(app_state): State<AppState>,
-    axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
+    Query(params): Query<std::collections::HashMap<String, String>>,
 ) -> (StatusCode, Json<Value>) {
     let limit = params.get("limit")
         .and_then(|s| s.parse::<i64>().ok())
@@ -138,7 +138,7 @@ async fn get_tracks_for_conversion(
 #[instrument(skip(app_state), fields(track_id = %track_id))]
 async fn update_track_youtube_url(
     State(app_state): State<AppState>,
-    axum::extract::Path(track_id): axum::extract::Path<String>,
+    Path(track_id): Path<String>,
     Json(payload): Json<Value>,
 ) -> (StatusCode, Json<Value>) {
     if let Some(youtube_url) = payload.get("youtube_url").and_then(|v| v.as_str()) {
@@ -182,41 +182,58 @@ async fn update_track_youtube_url(
 #[instrument(skip(app_state), fields(playlist_id = %playlist_id))]
 async fn get_playlist_tracks_with_youtube(
     State(app_state): State<AppState>,
-    axum::extract::Path(playlist_id): axum::extract::Path<String>,
+    Path(playlist_id): Path<String>,
 ) -> (StatusCode, Json<Value>) {
     info!("Getting playlist tracks with YouTube URLs");
     
-    match app_state.get_playlist_tracks_with_youtube(&playlist_id).await {
-        Ok(tracks) => {
-            info!(count = tracks.len(), "Successfully retrieved playlist tracks with YouTube URLs");
-            (
-                StatusCode::OK,
-                Json(json!({
-                    "status": "success",
-                    "playlist_id": playlist_id,
-                    "tracks": tracks,
-                    "count": tracks.len()
-                }))
-            )
-        },
+    let tracks = match app_state.get_playlist_tracks_with_youtube(&playlist_id).await {
+        Ok(tracks) => tracks,
         Err(e) => {
             error!(error = %e, "Failed to get playlist tracks with YouTube URLs");
-            (
+            return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({
                     "status": "error",
                     "message": format!("Failed to get playlist tracks: {}", e)
                 }))
-            )
+            );
+        }
+    };
+    
+    // Extract just the tracks (first element of tuple)
+    let track_list: Vec<_> = tracks.into_iter().map(|(track, _position)| track).collect();
+    
+    // Try to get the playlist metadata to match frontend expectation
+    let response_json = match app_state.get_playlist(&playlist_id).await {
+        Ok(playlist) => {
+            json!({
+                "status": "success",
+                "playlist": playlist,
+                "tracks": track_list,
+                "count": track_list.len()
+            })
         },
-    }
+        Err(e) => {
+            error!(error = %e, "Failed to get playlist metadata");
+            // Fallback to just tracks if playlist metadata fetch fails
+            json!({
+                "status": "success",
+                "playlist_id": playlist_id,
+                "tracks": track_list,
+                "count": track_list.len()
+            })
+        }
+    };
+    
+    info!(count = track_list.len(), "Successfully retrieved playlist tracks with YouTube URLs");
+    (StatusCode::OK, Json(response_json))
 }
 
 // Search tracks in database
 #[instrument(skip(app_state))]
 async fn search_tracks(
     State(app_state): State<AppState>,
-    axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
+    Query(params): Query<std::collections::HashMap<String, String>>,
 ) -> (StatusCode, Json<Value>) {
     if let Some(query) = params.get("q") {
         let limit = params.get("limit")
@@ -303,8 +320,8 @@ async fn get_conversion_stats(State(app_state): State<AppState>) -> (StatusCode,
 #[instrument(skip(app_state), fields(track_id = %track_id))]
 async fn convert_track_manually(
     State(app_state): State<AppState>,
-    axum::extract::Path(track_id): axum::extract::Path<String>,
-    axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
+    Path(track_id): Path<String>,
+    Query(params): Query<std::collections::HashMap<String, String>>,
 ) -> (StatusCode, Json<Value>) {
     let force = params.get("force").map(|v| v == "true").unwrap_or(false);
     
@@ -413,10 +430,51 @@ async fn add_track(
     }
 }
 
+// Get all playlists
+#[instrument(skip(app_state))]
+async fn get_playlists(
+    State(app_state): State<AppState>,
+    Query(params): Query<std::collections::HashMap<String, String>>,
+) -> (StatusCode, Json<Value>) {
+    let limit = params.get("limit")
+        .and_then(|s| s.parse::<i64>().ok())
+        .unwrap_or(50);
+    let offset = params.get("offset")
+        .and_then(|s| s.parse::<i64>().ok())
+        .unwrap_or(0);
+
+    info!("Getting playlists from database");
+
+    match app_state.get_all_playlists(limit, offset).await {
+        Ok(playlists) => {
+            info!(count = playlists.len(), "Successfully retrieved playlists");
+            (
+                StatusCode::OK,
+                Json(json!({
+                    "status": "success",
+                    "playlists": playlists,
+                    "count": playlists.len()
+                }))
+            )
+        },
+        Err(e) => {
+            error!(error = %e, "Failed to get playlists");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "status": "error",
+                    "message": format!("Failed to get playlists: {}", e)
+                }))
+            )
+        },
+    }
+}
+
 async fn start_web_server(app_state: AppState, port: String) -> Result<(), Box<dyn std::error::Error>> {
     let app = Router::new()
         .route("/health", get(health_check))
         .route("/api/status", get(api_status))
+        .route("/api/playlists", get(get_playlists))
         .route("/api/playlists/:playlist_id/store", post(store_playlist))
         .route("/api/tracks/for-conversion", get(get_tracks_for_conversion))
         .route("/api/tracks/:track_id/youtube-url", put(update_track_youtube_url))
@@ -436,6 +494,7 @@ async fn start_web_server(app_state: AppState, port: String) -> Result<(), Box<d
     info!("📖 API Documentation:");
     info!("   GET  /health - Health check");
     info!("   GET  /api/status - Service status");
+    info!("   GET  /api/playlists - Get all playlists");
     info!("   POST /api/playlists/:id/store - Store playlist in database");
     info!("   GET  /api/tracks/for-conversion - Get tracks needing conversion");
     info!("   PUT  /api/tracks/:id/youtube-url - Update track YouTube URL");
@@ -445,6 +504,7 @@ async fn start_web_server(app_state: AppState, port: String) -> Result<(), Box<d
     info!("   POST /api/tracks/:id/convert - Manually convert track");
     info!("   POST /api/playlists/import - Import playlist by URL");
     info!("   POST /api/tracks/add - Add individual track");
+    info!("   GET  /api/playlists - Get all playlists");
     
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     info!("🚀 Server listening on {}", addr);

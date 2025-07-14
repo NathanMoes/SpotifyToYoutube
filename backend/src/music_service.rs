@@ -155,6 +155,16 @@ impl MusicDataService {
     pub async fn get_conversion_stats(&self) -> Result<(u64, u64, u64), Box<dyn std::error::Error>> {
         self.db.get_conversion_stats().await
     }
+
+    /// Get all playlists from the database
+    pub async fn get_all_playlists(&self, limit: i64, offset: i64) -> Result<Vec<crate::database::DatabasePlaylist>, Box<dyn std::error::Error>> {
+        self.db.get_all_playlists(limit, offset).await
+    }
+
+    /// Get a specific playlist from the database
+    pub async fn get_playlist(&self, playlist_id: &str) -> Result<crate::database::DatabasePlaylist, Box<dyn std::error::Error>> {
+        self.db.get_playlist(playlist_id).await
+    }
 }
 
 #[derive(Debug, Clone)]

@@ -42,9 +42,47 @@ pub struct DatabaseTrack {
     pub isrc: Option<String>,
 }
 
+// Database playlist structure
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct DatabasePlaylist {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub spotify_uri: String,
+    pub owner_id: String,
+    pub owner_display_name: String,
+    pub public: bool,
+    pub collaborative: bool,
+    pub snapshot_id: String,
+    pub total_tracks: u32,
+}
+
 #[derive(Deserialize)]
 pub struct TracksForConversionResponse {
     pub status: String,
+    pub tracks: Vec<DatabaseTrack>,
+    pub count: usize,
+}
+
+#[derive(Deserialize)]
+pub struct SearchTracksResponse {
+    pub status: String,
+    pub query: String,
+    pub tracks: Vec<DatabaseTrack>,
+    pub count: usize,
+}
+
+#[derive(Deserialize)]
+pub struct PlaylistsResponse {
+    pub status: String,
+    pub playlists: Vec<DatabasePlaylist>,
+    pub count: usize,
+}
+
+#[derive(Deserialize)]
+pub struct PlaylistTracksResponse {
+    pub status: String,
+    pub playlist: DatabasePlaylist,
     pub tracks: Vec<DatabaseTrack>,
     pub count: usize,
 }
@@ -111,9 +149,67 @@ impl ApiService {
             .map_err(|e| format!("Failed to parse response: {:?}", e))
     }
 
-    pub async fn get_tracks_for_conversion(&self, limit: Option<i64>) -> Result<TracksForConversionResponse, String> {
+    pub async fn get_tracks_for_conversion(&self, limit: Option<i64>, offset: Option<i64>) -> Result<TracksForConversionResponse, String> {
         let limit_param = limit.unwrap_or(50);
-        let url_endpoint = format!("{}/api/tracks/for-conversion?limit={}", self.base_url, limit_param);
+        let offset_param = offset.unwrap_or(0);
+        let url_endpoint = format!("{}/api/tracks/for-conversion?limit={}&offset={}", self.base_url, limit_param, offset_param);
+        
+        let response = Request::get(&url_endpoint)
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {:?}", e))?;
+
+        if !response.ok() {
+            return Err(format!("HTTP error: {}", response.status()));
+        }
+
+        response.json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {:?}", e))
+    }
+
+    pub async fn search_tracks(&self, query: &str, limit: Option<i64>) -> Result<SearchTracksResponse, String> {
+        let limit_param = limit.unwrap_or(20);
+        let url_endpoint = format!("{}/api/tracks/search?q={}&limit={}", self.base_url, 
+            urlencoding::encode(query), limit_param);
+        
+        let response = Request::get(&url_endpoint)
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {:?}", e))?;
+
+        if !response.ok() {
+            return Err(format!("HTTP error: {}", response.status()));
+        }
+
+        response.json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {:?}", e))
+    }
+
+    pub async fn get_playlists(&self, limit: Option<i64>, offset: Option<i64>) -> Result<PlaylistsResponse, String> {
+        let limit_param = limit.unwrap_or(50);
+        let offset_param = offset.unwrap_or(0);
+        let url_endpoint = format!("{}/api/playlists?limit={}&offset={}", self.base_url, limit_param, offset_param);
+        
+        let response = Request::get(&url_endpoint)
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {:?}", e))?;
+
+        if !response.ok() {
+            return Err(format!("HTTP error: {}", response.status()));
+        }
+
+        response.json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {:?}", e))
+    }
+
+    pub async fn get_playlist_tracks(&self, playlist_id: &str, limit: Option<i64>, offset: Option<i64>) -> Result<PlaylistTracksResponse, String> {
+        let limit_param = limit.unwrap_or(50);
+        let offset_param = offset.unwrap_or(0);
+        let url_endpoint = format!("{}/api/playlists/{}/tracks?limit={}&offset={}", self.base_url, playlist_id, limit_param, offset_param);
         
         let response = Request::get(&url_endpoint)
             .send()

@@ -19,6 +19,7 @@ yew-router = "0.18"
 console_error_panic_hook = "0.1.7"
 console_log = "0.2.0"
 log = { version = "0.4", features = ["max_level_info"] }
+urlencoding = "2.1"
 
 
 [lib]

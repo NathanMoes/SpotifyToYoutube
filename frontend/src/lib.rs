@@ -11,6 +11,7 @@ use components::header::Header;
 use pages::home::Home;
 use pages::add_tracks::AddTracks;
 use pages::display_tracks::DisplayTracks;
+use pages::playlists::Playlists;
 use pages::not_found::NotFound;
 
 /// The routes for the application
@@ -22,6 +23,8 @@ enum Route {
     AddTracks,
     #[at("/display-tracks")]
     DisplayTracks,
+    #[at("/playlists")]
+    Playlists,
     #[not_found]
     #[at("/404")]
     NotFound,
@@ -34,6 +37,7 @@ fn switch_route(route: &Route) -> Html {
         Route::Home => html! { <Home /> },
         Route::AddTracks => html! { <AddTracks /> },
         Route::DisplayTracks => html! { <DisplayTracks /> },
+        Route::Playlists => html! { <Playlists /> },
         Route::NotFound => html! { <NotFound /> },
     }
 }

@@ -158,6 +158,16 @@ impl AppState {
         Ok(tracks)
     }
 
+    /// Get all playlists from the database
+    pub async fn get_all_playlists(&self, limit: i64, offset: i64) -> Result<Vec<crate::database::DatabasePlaylist>, Box<dyn std::error::Error>> {
+        self.music_service.get_all_playlists(limit, offset).await
+    }
+
+    /// Get a specific playlist from the database
+    pub async fn get_playlist(&self, playlist_id: &str) -> Result<crate::database::DatabasePlaylist, Box<dyn std::error::Error>> {
+        self.music_service.get_playlist(playlist_id).await
+    }
+
     // Extract playlist ID from Spotify URL
     pub fn extract_playlist_id_from_url(url: &str) -> Result<String, Box<dyn std::error::Error>> {
         // Handle various Spotify URL formats:

@@ -13,6 +13,7 @@ pub fn header() -> Html {
                         <Link<Route> to={Route::Home} classes="nav-link">{"Home"}</Link<Route>>
                         <Link<Route> to={Route::AddTracks} classes="nav-link">{"Add Tracks"}</Link<Route>>
                         <Link<Route> to={Route::DisplayTracks} classes="nav-link">{"View Tracks"}</Link<Route>>
+                        <Link<Route> to={Route::Playlists} classes="nav-link">{"Playlists"}</Link<Route>>
                     </nav>
                 </div>
             </div>
