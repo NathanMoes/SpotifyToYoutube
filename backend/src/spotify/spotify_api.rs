@@ -449,37 +449,6 @@ impl SpotifyApi {
         }
     }
 
-    pub async fn fetch_playlist_tracks(
-        &mut self,
-        playlist_id: &str,
-    ) -> Result<SpotifyPlaylistTracks, SpotifyApiError> {
-        self.ensure_valid_token().await?;
-        
-        if let Some(token) = &self.access_token {
-            let client = reqwest::Client::new();
-            let response = client
-                .get(format!("https://api.spotify.com/v1/playlists/{}/tracks", playlist_id))
-                .bearer_auth(token)
-                .send()
-                .await?;
-
-            if response.status().is_success() {
-                let tracks = response.json::<SpotifyPlaylistTracks>().await?;
-                Ok(tracks)
-            } else {
-                let status = response.status();
-                let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-                Err(SpotifyApiError::AuthError(
-                    format!("The client is unauthorized due to authentication failure. Status: {}, Error: {}", status, error_text),
-                ))
-            }
-        } else {
-            Err(SpotifyApiError::InvalidData(
-                "No access token available".to_string(),
-            ))
-        }
-    }
-
     #[allow(dead_code)]
     pub async fn fetch_playlist(
         &mut self,
@@ -510,6 +479,16 @@ impl SpotifyApi {
                 "No access token available".to_string(),
             ))
         }
+    }
+
+    /// Get tracks from a playlist by fetching the full playlist data
+    #[allow(dead_code)]
+    pub async fn get_playlist_tracks(
+        &mut self,
+        playlist_id: &str,
+    ) -> Result<SpotifyPlaylistTracks, SpotifyApiError> {
+        let playlist = self.fetch_playlist(playlist_id).await?;
+        Ok(playlist.tracks)
     }
 
     /// Get current token state for persistence

@@ -112,7 +112,8 @@ impl DatabaseManager {
         .param("spotify_uri", artist.spotify_uri.clone())
         .param("external_urls", artist.external_urls.clone());
 
-        self.graph.execute(query).await.map_err(|e| format!("Failed to create/update artist: {}", e))?;
+        let mut result = self.graph.execute(query).await.map_err(|e| format!("Failed to create/update artist: {}", e))?;
+        let _ = result.next().await; // Consume the result to ensure the query executes
         Ok(())
     }
 
@@ -142,7 +143,8 @@ impl DatabaseManager {
         .param("youtube_url", track.youtube_url.clone())
         .param("isrc", track.isrc.clone());
 
-        self.graph.execute(query).await.map_err(|e| format!("Failed to create/update track: {}", e))?;
+        let mut result = self.graph.execute(query).await.map_err(|e| format!("Failed to create/update track: {}", e))?;
+        let _ = result.next().await; // Consume the result to ensure the query executes
         Ok(())
     }
 
@@ -172,7 +174,8 @@ impl DatabaseManager {
         .param("snapshot_id", playlist.snapshot_id.clone())
         .param("total_tracks", playlist.total_tracks as i64);
 
-        self.graph.execute(query).await.map_err(|e| format!("Failed to create/update playlist: {}", e))?;
+        let mut result = self.graph.execute(query).await.map_err(|e| format!("Failed to create/update playlist: {}", e))?;
+        let _ = result.next().await; // Consume the result to ensure the query executes
         Ok(())
     }
 
@@ -194,7 +197,8 @@ impl DatabaseManager {
         .param("release_date", album.release_date.clone())
         .param("total_tracks", album.total_tracks as i64);
 
-        self.graph.execute(query).await.map_err(|e| format!("Failed to create/update album: {}", e))?;
+        let mut result = self.graph.execute(query).await.map_err(|e| format!("Failed to create/update album: {}", e))?;
+        let _ = result.next().await; // Consume the result to ensure the query executes
         Ok(())
     }
 
@@ -207,7 +211,8 @@ impl DatabaseManager {
         .param("track_id", track_id.to_string())
         .param("artist_id", artist_id.to_string());
 
-        self.graph.execute(query).await.map_err(|e| format!("Failed to link track to artist: {}", e))?;
+        let mut result = self.graph.execute(query).await.map_err(|e| format!("Failed to link track to artist: {}", e))?;
+        let _ = result.next().await; // Consume the result to ensure the query executes
         Ok(())
     }
 
@@ -219,7 +224,8 @@ impl DatabaseManager {
         .param("track_id", track_id.to_string())
         .param("album_id", album_id.to_string());
 
-        self.graph.execute(query).await.map_err(|e| format!("Failed to link track to album: {}", e))?;
+        let mut result = self.graph.execute(query).await.map_err(|e| format!("Failed to link track to album: {}", e))?;
+        let _ = result.next().await; // Consume the result to ensure the query executes
         Ok(())
     }
 
@@ -234,7 +240,8 @@ impl DatabaseManager {
         .param("track_id", track_id.to_string())
         .param("position", position);
 
-        self.graph.execute(query).await.map_err(|e| format!("Failed to link playlist to track: {}", e))?;
+        let mut result = self.graph.execute(query).await.map_err(|e| format!("Failed to link playlist to track: {}", e))?;
+        let _ = result.next().await; // Consume the result to ensure the query executes
         Ok(())
     }
 
@@ -246,19 +253,73 @@ impl DatabaseManager {
         .param("album_id", album_id.to_string())
         .param("artist_id", artist_id.to_string());
 
-        self.graph.execute(query).await.map_err(|e| format!("Failed to link album to artist: {}", e))?;
+        let mut result = self.graph.execute(query).await.map_err(|e| format!("Failed to link album to artist: {}", e))?;
+        let _ = result.next().await; // Consume the result to ensure the query executes
         Ok(())
     }
 
     // Simple operations for now - returning empty results to avoid compilation errors
-    pub async fn find_track_by_isrc(&self, _isrc: &str) -> Result<Option<DatabaseTrack>, Box<dyn std::error::Error>> {
-        // Simplified for now
+    pub async fn find_track_by_isrc(&self, isrc: &str) -> Result<Option<DatabaseTrack>, Box<dyn std::error::Error>> {
+        let query = Query::new(
+            "MATCH (t:Track {isrc: $isrc}) 
+             RETURN t".to_string()
+        )
+        .param("isrc", isrc.to_string());
+
+        let mut result = self.graph.execute(query).await.map_err(|e| format!("Failed to find track by ISRC: {}", e))?;
+        
+        if let Some(row) = result.next().await.map_err(|e| format!("Failed to process query result: {}", e))? {
+            if let Ok(node) = row.get::<neo4rs::Node>("t") {
+                let track = DatabaseTrack {
+                    id: node.get::<String>("id").unwrap_or_default(),
+                    name: node.get::<String>("name").unwrap_or_default(),
+                    spotify_uri: node.get::<String>("spotify_uri").unwrap_or_default(),
+                    duration_ms: node.get::<i64>("duration_ms").unwrap_or(0) as u32,
+                    explicit: node.get::<bool>("explicit").unwrap_or(false),
+                    popularity: node.get::<i64>("popularity").unwrap_or(0) as u32,
+                    preview_url: node.get::<Option<String>>("preview_url").unwrap_or(None),
+                    external_urls: node.get::<String>("external_urls").unwrap_or_default(),
+                    youtube_url: node.get::<Option<String>>("youtube_url").unwrap_or(None),
+                    isrc: node.get::<Option<String>>("isrc").unwrap_or(None),
+                };
+                return Ok(Some(track));
+            }
+        }
+        
         Ok(None)
     }
 
-    pub async fn find_tracks_without_youtube_url(&self, _limit: i64) -> Result<Vec<DatabaseTrack>, Box<dyn std::error::Error>> {
-        // Simplified for now
-        Ok(Vec::new())
+    pub async fn find_tracks_without_youtube_url(&self, limit: i64) -> Result<Vec<DatabaseTrack>, Box<dyn std::error::Error>> {
+        let query = Query::new(
+            "MATCH (t:Track)
+             WHERE t.youtube_url IS NULL
+             RETURN t
+             LIMIT $limit".to_string()
+        )
+        .param("limit", limit);
+
+        let mut result = self.graph.execute(query).await.map_err(|e| format!("Failed to find tracks without YouTube URL: {}", e))?;
+        let mut tracks = Vec::new();
+
+        while let Some(row) = result.next().await.map_err(|e| format!("Failed to process query result: {}", e))? {
+            if let Ok(node) = row.get::<neo4rs::Node>("t") {
+                let track = DatabaseTrack {
+                    id: node.get::<String>("id").unwrap_or_default(),
+                    name: node.get::<String>("name").unwrap_or_default(),
+                    spotify_uri: node.get::<String>("spotify_uri").unwrap_or_default(),
+                    duration_ms: node.get::<i64>("duration_ms").unwrap_or(0) as u32,
+                    explicit: node.get::<bool>("explicit").unwrap_or(false),
+                    popularity: node.get::<i64>("popularity").unwrap_or(0) as u32,
+                    preview_url: node.get::<Option<String>>("preview_url").unwrap_or(None),
+                    external_urls: node.get::<String>("external_urls").unwrap_or_default(),
+                    youtube_url: node.get::<Option<String>>("youtube_url").unwrap_or(None),
+                    isrc: node.get::<Option<String>>("isrc").unwrap_or(None),
+                };
+                tracks.push(track);
+            }
+        }
+
+        Ok(tracks)
     }
 
     pub async fn update_track_youtube_url(&self, track_id: &str, youtube_url: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -270,17 +331,105 @@ impl DatabaseManager {
         .param("track_id", track_id.to_string())
         .param("youtube_url", youtube_url.to_string());
 
-        self.graph.execute(query).await.map_err(|e| format!("Failed to update track YouTube URL: {}", e))?;
+        let mut result = self.graph.execute(query).await.map_err(|e| format!("Failed to update track YouTube URL: {}", e))?;
+        let _ = result.next().await; // Consume the result to ensure the query executes
         Ok(())
     }
 
-    pub async fn get_playlist_tracks(&self, _playlist_id: &str) -> Result<Vec<(DatabaseTrack, i64)>, Box<dyn std::error::Error>> {
-        // Simplified for now
-        Ok(Vec::new())
+    pub async fn get_playlist_tracks(&self, playlist_id: &str) -> Result<Vec<(DatabaseTrack, i64)>, Box<dyn std::error::Error>> {
+        let query = Query::new(
+            "MATCH (p:Playlist {id: $playlist_id})-[r:INCLUDES]->(t:Track)
+             RETURN t, r.position as position
+             ORDER BY r.position".to_string()
+        )
+        .param("playlist_id", playlist_id.to_string());
+
+        let mut result = self.graph.execute(query).await.map_err(|e| format!("Failed to get playlist tracks: {}", e))?;
+        let mut tracks = Vec::new();
+
+        while let Some(row) = result.next().await.map_err(|e| format!("Failed to process query result: {}", e))? {
+            if let (Ok(node), Ok(position)) = (row.get::<neo4rs::Node>("t"), row.get::<i64>("position")) {
+                let track = DatabaseTrack {
+                    id: node.get::<String>("id").unwrap_or_default(),
+                    name: node.get::<String>("name").unwrap_or_default(),
+                    spotify_uri: node.get::<String>("spotify_uri").unwrap_or_default(),
+                    duration_ms: node.get::<i64>("duration_ms").unwrap_or(0) as u32,
+                    explicit: node.get::<bool>("explicit").unwrap_or(false),
+                    popularity: node.get::<i64>("popularity").unwrap_or(0) as u32,
+                    preview_url: node.get::<Option<String>>("preview_url").unwrap_or(None),
+                    external_urls: node.get::<String>("external_urls").unwrap_or_default(),
+                    youtube_url: node.get::<Option<String>>("youtube_url").unwrap_or(None),
+                    isrc: node.get::<Option<String>>("isrc").unwrap_or(None),
+                };
+                tracks.push((track, position));
+            }
+        }
+
+        Ok(tracks)
     }
 
-    pub async fn search_tracks_by_name(&self, _name: &str, _limit: i64) -> Result<Vec<DatabaseTrack>, Box<dyn std::error::Error>> {
-        // Simplified for now
-        Ok(Vec::new())
+    pub async fn search_tracks_by_name(&self, name: &str, limit: i64) -> Result<Vec<DatabaseTrack>, Box<dyn std::error::Error>> {
+        let query = Query::new(
+            "MATCH (t:Track)
+             WHERE toLower(t.name) CONTAINS toLower($name)
+             RETURN t
+             LIMIT $limit".to_string()
+        )
+        .param("name", name.to_string())
+        .param("limit", limit);
+
+        let mut result = self.graph.execute(query).await.map_err(|e| format!("Failed to search tracks by name: {}", e))?;
+        let mut tracks = Vec::new();
+
+        while let Some(row) = result.next().await.map_err(|e| format!("Failed to process query result: {}", e))? {
+            if let Ok(node) = row.get::<neo4rs::Node>("t") {
+                let track = DatabaseTrack {
+                    id: node.get::<String>("id").unwrap_or_default(),
+                    name: node.get::<String>("name").unwrap_or_default(),
+                    spotify_uri: node.get::<String>("spotify_uri").unwrap_or_default(),
+                    duration_ms: node.get::<i64>("duration_ms").unwrap_or(0) as u32,
+                    explicit: node.get::<bool>("explicit").unwrap_or(false),
+                    popularity: node.get::<i64>("popularity").unwrap_or(0) as u32,
+                    preview_url: node.get::<Option<String>>("preview_url").unwrap_or(None),
+                    external_urls: node.get::<String>("external_urls").unwrap_or_default(),
+                    youtube_url: node.get::<Option<String>>("youtube_url").unwrap_or(None),
+                    isrc: node.get::<Option<String>>("isrc").unwrap_or(None),
+                };
+                tracks.push(track);
+            }
+        }
+
+        Ok(tracks)
+    }
+
+    pub async fn get_conversion_stats(&self) -> Result<(u64, u64, u64), Box<dyn std::error::Error>> {
+        // Get total tracks
+        let total_query = Query::new("MATCH (t:Track) RETURN count(t) as total".to_string());
+        let mut total_result = self.graph.execute(total_query).await.map_err(|e| format!("Failed to get total tracks: {}", e))?;
+        let total_tracks = if let Some(row) = total_result.next().await.map_err(|e| format!("Failed to process total query result: {}", e))? {
+            row.get::<i64>("total").unwrap_or(0) as u64
+        } else {
+            0
+        };
+
+        // Get converted tracks (with YouTube URL)
+        let converted_query = Query::new("MATCH (t:Track) WHERE t.youtube_url IS NOT NULL RETURN count(t) as converted".to_string());
+        let mut converted_result = self.graph.execute(converted_query).await.map_err(|e| format!("Failed to get converted tracks: {}", e))?;
+        let converted_tracks = if let Some(row) = converted_result.next().await.map_err(|e| format!("Failed to process converted query result: {}", e))? {
+            row.get::<i64>("converted").unwrap_or(0) as u64
+        } else {
+            0
+        };
+
+        // Get pending tracks (without YouTube URL)
+        let pending_query = Query::new("MATCH (t:Track) WHERE t.youtube_url IS NULL RETURN count(t) as pending".to_string());
+        let mut pending_result = self.graph.execute(pending_query).await.map_err(|e| format!("Failed to get pending tracks: {}", e))?;
+        let pending_tracks = if let Some(row) = pending_result.next().await.map_err(|e| format!("Failed to process pending query result: {}", e))? {
+            row.get::<i64>("pending").unwrap_or(0) as u64
+        } else {
+            0
+        };
+
+        Ok((total_tracks, converted_tracks, pending_tracks))
     }
 }

@@ -27,6 +27,37 @@ pub struct AddTrackResponse {
     pub track_id: Option<String>,
 }
 
+// Database track structure matching backend
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DatabaseTrack {
+    pub id: String,
+    pub name: String,
+    pub spotify_uri: String,
+    pub duration_ms: u32,
+    pub explicit: bool,
+    pub popularity: u32,
+    pub preview_url: Option<String>,
+    pub external_urls: String,
+    pub youtube_url: Option<String>,
+    pub isrc: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct TracksForConversionResponse {
+    pub status: String,
+    pub tracks: Vec<DatabaseTrack>,
+    pub count: usize,
+}
+
+#[derive(Deserialize)]
+pub struct ConversionStatsResponse {
+    pub status: String,
+    pub total_tracks: u32,
+    pub tracks_with_youtube: u32,
+    pub tracks_without_youtube: u32,
+    pub conversion_percentage: f32,
+}
+
 pub struct ApiService {
     base_url: String,
 }
@@ -78,5 +109,61 @@ impl ApiService {
         response.json()
             .await
             .map_err(|e| format!("Failed to parse response: {:?}", e))
+    }
+
+    pub async fn get_tracks_for_conversion(&self, limit: Option<i64>) -> Result<TracksForConversionResponse, String> {
+        let limit_param = limit.unwrap_or(50);
+        let url_endpoint = format!("{}/api/tracks/for-conversion?limit={}", self.base_url, limit_param);
+        
+        let response = Request::get(&url_endpoint)
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {:?}", e))?;
+
+        if !response.ok() {
+            return Err(format!("HTTP error: {}", response.status()));
+        }
+
+        response.json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {:?}", e))
+    }
+
+    pub async fn get_conversion_stats(&self) -> Result<ConversionStatsResponse, String> {
+        let url_endpoint = format!("{}/api/conversion/stats", self.base_url);
+        
+        let response = Request::get(&url_endpoint)
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {:?}", e))?;
+
+        if !response.ok() {
+            return Err(format!("HTTP error: {}", response.status()));
+        }
+
+        response.json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {:?}", e))
+    }
+
+    pub async fn update_track_youtube_url(&self, track_id: &str, youtube_url: &str) -> Result<(), String> {
+        let url_endpoint = format!("{}/api/tracks/{}/youtube-url", self.base_url, track_id);
+        
+        let payload = serde_json::json!({
+            "youtube_url": youtube_url
+        });
+        
+        let response = Request::put(&url_endpoint)
+            .json(&payload)
+            .map_err(|e| format!("Failed to create request: {:?}", e))?
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {:?}", e))?;
+
+        if !response.ok() {
+            return Err(format!("HTTP error: {}", response.status()));
+        }
+
+        Ok(())
     }
 }

@@ -82,11 +82,11 @@ impl ConversionService {
 
     /// Get conversion statistics
     pub async fn get_conversion_stats(&self) -> Result<ConversionStats, Box<dyn std::error::Error>> {
-        // You'd implement this by querying the database for statistics
+        let (total_tracks, converted_tracks, pending_conversion) = self.music_service.get_conversion_stats().await?;
         Ok(ConversionStats {
-            total_tracks: 0, // Would query: MATCH (t:Track) RETURN count(t)
-            converted_tracks: 0, // Would query: MATCH (t:Track) WHERE t.youtube_url IS NOT NULL RETURN count(t)
-            pending_conversion: 0, // Would query: MATCH (t:Track) WHERE t.youtube_url IS NULL RETURN count(t)
+            total_tracks,
+            converted_tracks,
+            pending_conversion,
         })
     }
 }

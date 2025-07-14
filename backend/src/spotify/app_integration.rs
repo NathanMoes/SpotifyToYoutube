@@ -1,4 +1,4 @@
-use crate::spotify::spotify_api::{SpotifyApi, SpotifyPlaylistTracks, TokenState};
+use crate::spotify::spotify_api::{SpotifyApi, SpotifyPlaylist, TokenState};
 use crate::music_service::MusicDataService;
 use crate::conversion_service::ConversionService;
 use std::env;
@@ -90,9 +90,9 @@ impl AppState {
         Ok(playlists)
     }
 
-    pub async fn get_playlist_tracks(&self, playlist_id: &str) -> Result<SpotifyPlaylistTracks, Box<dyn std::error::Error>> {
+    pub async fn get_playlist_tracks(&self, playlist_id: &str) -> Result<SpotifyPlaylist, Box<dyn std::error::Error>> {
         let mut api = self.spotify_api.lock().await;
-        let tracks = api.fetch_playlist_tracks(playlist_id).await?;
+        let tracks = api.fetch_playlist(playlist_id).await?;
         Ok(tracks)
     }
 
@@ -117,35 +117,25 @@ impl AppState {
 
     // Database integration methods
     pub async fn store_playlist_in_database(&self, playlist_id: &str) -> Result<(), Box<dyn std::error::Error>> {
-        // First get the playlist tracks from Spotify
-        let tracks = self.get_playlist_tracks(playlist_id).await?;
+        // Get the full playlist data from Spotify
+        let playlist = self.get_playlist_tracks(playlist_id).await?;
         
-        // Get playlist metadata (you might need to implement this in SpotifyApi)
-        let playlist_info = self.get_playlist_info(playlist_id).await?;
-        
-        // Store in database
+        // Store in database using the playlist data directly
         self.music_service.store_playlist_data(
             playlist_id,
-            &playlist_info["name"].as_str().unwrap_or("Unknown Playlist"),
-            playlist_info["description"].as_str().map(|s| s.to_string()),
-            &playlist_info["uri"].as_str().unwrap_or(""),
-            &playlist_info["owner"]["id"].as_str().unwrap_or(""),
-            &playlist_info["owner"]["display_name"].as_str().unwrap_or("Unknown User"),
-            playlist_info["public"].as_bool().unwrap_or(false),
-            playlist_info["collaborative"].as_bool().unwrap_or(false),
-            &playlist_info["snapshot_id"].as_str().unwrap_or(""),
-            &tracks,
+            &playlist.name,
+            playlist.description.clone(),
+            &playlist.uri,
+            &playlist.owner.id,
+            playlist.owner.display_name.as_deref().unwrap_or("Unknown User"),
+            playlist.public,
+            playlist.collaborative,
+            &playlist.snapshot_id,
+            &playlist.tracks,
         ).await?;
 
-        println!("✅ Stored playlist {} in database with {} tracks", playlist_id, tracks.items.len());
+        println!("✅ Stored playlist {} in database with {} tracks", playlist_id, playlist.tracks.items.len());
         Ok(())
-    }
-
-    pub async fn get_playlist_info(&self, playlist_id: &str) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
-        let mut api = self.spotify_api.lock().await;
-        let playlist = api.fetch_playlist(playlist_id).await?;
-        let playlist_json = serde_json::to_value(playlist)?;
-        Ok(playlist_json)
     }
 
     pub async fn get_tracks_for_conversion(&self, limit: i64) -> Result<Vec<crate::database::DatabaseTrack>, Box<dyn std::error::Error>> {
@@ -191,9 +181,9 @@ impl AppState {
         self.store_playlist_in_database(&playlist_id).await?;
         
         // Get tracks count for response
-        let tracks = self.get_playlist_tracks(&playlist_id).await?;
+        let playlist = self.get_playlist_tracks(&playlist_id).await?;
         
-        Ok((playlist_id, tracks.items.len()))
+        Ok((playlist_id, playlist.tracks.items.len()))
     }
 
     pub async fn add_track(&self, track_name: &str, artist_name: &str) -> Result<String, Box<dyn std::error::Error>> {

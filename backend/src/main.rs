@@ -487,8 +487,8 @@ async fn main() {
             let playlist_id = "441K4rF3u0qfg9m4X1WSQJ";
             match app_state.get_playlist_tracks(playlist_id).await {
                 Ok(tracks) => {
-                    info!(track_count = tracks.items.len(), "Successfully fetched tracks");
-                    for (i, item) in tracks.items.iter().take(5).enumerate() {
+                    info!(track_count = tracks.tracks.items.len(), "Successfully fetched tracks");
+                    for (i, item) in tracks.tracks.items.iter().take(5).enumerate() {
                         debug!(
                             position = i + 1,
                             track_name = %item.track.name,

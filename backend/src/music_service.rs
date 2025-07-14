@@ -150,6 +150,11 @@ impl MusicDataService {
             tracks_with_youtube_urls: 0,
         })
     }
+
+    /// Get conversion statistics
+    pub async fn get_conversion_stats(&self) -> Result<(u64, u64, u64), Box<dyn std::error::Error>> {
+        self.db.get_conversion_stats().await
+    }
 }
 
 #[derive(Debug, Clone)]

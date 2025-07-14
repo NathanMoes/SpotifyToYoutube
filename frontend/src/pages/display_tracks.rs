@@ -1,8 +1,10 @@
 use yew::prelude::*;
+use wasm_bindgen_futures::spawn_local;
+use crate::services::api::{ApiService, DatabaseTrack};
 
 #[derive(Clone, PartialEq)]
 pub struct Track {
-    pub id: u32,
+    pub id: String,
     pub name: String,
     pub artist: String,
     pub spotify_url: Option<String>,
@@ -29,39 +31,134 @@ impl std::fmt::Display for TrackStatus {
     }
 }
 
+// Helper function to convert DatabaseTrack to Track
+fn database_track_to_track(db_track: &DatabaseTrack) -> Track {
+    let status = if db_track.youtube_url.is_some() {
+        TrackStatus::Converted
+    } else {
+        TrackStatus::Found
+    };
+
+    let spotify_url = if !db_track.spotify_uri.is_empty() {
+        Some(format!("https://open.spotify.com/track/{}", 
+            db_track.spotify_uri.strip_prefix("spotify:track:").unwrap_or(&db_track.id)))
+    } else {
+        None
+    };
+
+    Track {
+        id: db_track.id.clone(),
+        name: db_track.name.clone(),
+        artist: "Various Artists".to_string(), // We'll need to fetch artist info separately
+        spotify_url,
+        youtube_url: db_track.youtube_url.clone(),
+        status,
+    }
+}
+
+// Helper function to extract artist name from external URLs (fallback)
+fn extract_artist_from_external_urls(_external_urls: &str) -> String {
+    // This is a simplified extraction - in real implementation you might parse JSON
+    "Various Artists".to_string()
+}
+
 #[function_component(DisplayTracks)]
 pub fn display_tracks() -> Html {
-    // Mock data for demonstration
-    let tracks = use_state(|| vec![
-        Track {
-            id: 1,
-            name: "Bohemian Rhapsody".to_string(),
-            artist: "Queen".to_string(),
-            spotify_url: Some("https://open.spotify.com/track/4u7EnebtmKWzUH433cf5Qv".to_string()),
-            youtube_url: Some("https://www.youtube.com/watch?v=fJ9rUzIMcZQ".to_string()),
-            status: TrackStatus::Converted,
-        },
-        Track {
-            id: 2,
-            name: "Imagine".to_string(),
-            artist: "John Lennon".to_string(),
-            spotify_url: Some("https://open.spotify.com/track/7pKfPomDEeI4TPT6EOYjn9".to_string()),
-            youtube_url: None,
-            status: TrackStatus::Found,
-        },
-        Track {
-            id: 3,
-            name: "Hotel California".to_string(),
-            artist: "Eagles".to_string(),
-            spotify_url: Some("https://open.spotify.com/track/40riOy7x9W7GXjyGp4pjAv".to_string()),
-            youtube_url: None,
-            status: TrackStatus::Pending,
-        },
-    ]);
+    let tracks = use_state(|| Vec::<Track>::new());
+    let loading = use_state(|| true);
+    let error = use_state(|| Option::<String>::None);
+
+    // Load tracks from database on component mount
+    {
+        let tracks = tracks.clone();
+        let loading = loading.clone();
+        let error = error.clone();
+        
+        use_effect_with((), move |_| {
+            spawn_local(async move {
+                let api_service = ApiService::new();
+                
+                match api_service.get_tracks_for_conversion(Some(20)).await {
+                    Ok(response) => {
+                        let mut converted_tracks = response.tracks.iter()
+                            .map(database_track_to_track)
+                            .collect::<Vec<Track>>();
+
+                        // If no tracks from database, use fallback static tracks
+                        if converted_tracks.is_empty() {
+                            converted_tracks = vec![
+                                Track {
+                                    id: "1".to_string(),
+                                    name: "Bohemian Rhapsody".to_string(),
+                                    artist: "Queen".to_string(),
+                                    spotify_url: Some("https://open.spotify.com/track/4u7EnebtmKWzUH433cf5Qv".to_string()),
+                                    youtube_url: Some("https://www.youtube.com/watch?v=fJ9rUzIMcZQ".to_string()),
+                                    status: TrackStatus::Converted,
+                                },
+                                Track {
+                                    id: "2".to_string(),
+                                    name: "Imagine".to_string(),
+                                    artist: "John Lennon".to_string(),
+                                    spotify_url: Some("https://open.spotify.com/track/7pKfPomDEeI4TPT6EOYjn9".to_string()),
+                                    youtube_url: None,
+                                    status: TrackStatus::Found,
+                                },
+                                Track {
+                                    id: "3".to_string(),
+                                    name: "Hotel California".to_string(),
+                                    artist: "Eagles".to_string(),
+                                    spotify_url: Some("https://open.spotify.com/track/40riOy7x9W7GXjyGp4pjAv".to_string()),
+                                    youtube_url: None,
+                                    status: TrackStatus::Pending,
+                                },
+                            ];
+                        }
+
+                        tracks.set(converted_tracks);
+                        loading.set(false);
+                    },
+                    Err(err) => {
+                        // On error, use fallback static tracks
+                        let fallback_tracks = vec![
+                            Track {
+                                id: "1".to_string(),
+                                name: "Bohemian Rhapsody".to_string(),
+                                artist: "Queen".to_string(),
+                                spotify_url: Some("https://open.spotify.com/track/4u7EnebtmKWzUH433cf5Qv".to_string()),
+                                youtube_url: Some("https://www.youtube.com/watch?v=fJ9rUzIMcZQ".to_string()),
+                                status: TrackStatus::Converted,
+                            },
+                            Track {
+                                id: "2".to_string(),
+                                name: "Imagine".to_string(),
+                                artist: "John Lennon".to_string(),
+                                spotify_url: Some("https://open.spotify.com/track/7pKfPomDEeI4TPT6EOYjn9".to_string()),
+                                youtube_url: None,
+                                status: TrackStatus::Found,
+                            },
+                            Track {
+                                id: "3".to_string(),
+                                name: "Hotel California".to_string(),
+                                artist: "Eagles".to_string(),
+                                spotify_url: Some("https://open.spotify.com/track/40riOy7x9W7GXjyGp4pjAv".to_string()),
+                                youtube_url: None,
+                                status: TrackStatus::Pending,
+                            },
+                        ];
+                        
+                        tracks.set(fallback_tracks);
+                        error.set(Some(format!("Failed to load tracks from database: {}. Using fallback data.", err)));
+                        loading.set(false);
+                    }
+                }
+            });
+            || ()
+        });
+    }
 
     let convert_track = {
         let tracks = tracks.clone();
-        Callback::from(move |track_id: u32| {
+        Callback::from(move |track_id: String| {
             let mut updated_tracks = (*tracks).clone();
             if let Some(track) = updated_tracks.iter_mut().find(|t| t.id == track_id) {
                 track.status = TrackStatus::Converted;
@@ -71,10 +168,30 @@ pub fn display_tracks() -> Html {
         })
     };
 
+    if *loading {
+        return html! {
+            <div class="display-tracks">
+                <div class="container">
+                    <h2>{"Loading tracks..."}</h2>
+                </div>
+            </div>
+        };
+    }
+
     html! {
         <div class="display-tracks">
             <div class="container">
                 <h2>{"Your Tracks"}</h2>
+                
+                {if let Some(err) = (*error).as_ref() {
+                    html! {
+                        <div class="error-message" style="background: #fee; color: #c00; padding: 10px; margin-bottom: 20px; border-radius: 4px;">
+                            {err}
+                        </div>
+                    }
+                } else {
+                    html! {}
+                }}
                 
                 <div class="tracks-summary">
                     <div class="summary-card">
@@ -93,14 +210,14 @@ pub fn display_tracks() -> Html {
 
                 <div class="tracks-list">
                     {for tracks.iter().map(|track| {
-                        let track_id = track.id;
+                        let track_id = track.id.clone();
                         let on_convert = {
                             let convert_track = convert_track.clone();
-                            Callback::from(move |_| convert_track.emit(track_id))
+                            Callback::from(move |_| convert_track.emit(track_id.clone()))
                         };
 
                         html! {
-                            <div class="track-card" key={track.id}>
+                            <div class="track-card" key={track.id.clone()}>
                                 <div class="track-info">
                                     <h4>{&track.name}</h4>
                                     <p class="artist">{&track.artist}</p>
