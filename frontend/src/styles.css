@@ -209,6 +209,7 @@ body {
     text-align: center;
     padding: 1.5rem;
     backdrop-filter: blur(10px);
+    margin-top: 1.5rem;
 }
 
 .footer p {

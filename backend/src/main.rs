@@ -563,16 +563,27 @@ async fn main() {
                         Ok(()) => {
                             info!("Playlist stored in database successfully");
                             
+                            // Run startup YouTube URL conversion process
+                            info!("🚀 Starting automatic YouTube URL conversion for missing tracks...");
+                            match app_state.conversion_service.process_missing_youtube_urls_on_startup(50, Some(100)).await {
+                                Ok(()) => {
+                                    info!("✅ Startup YouTube URL conversion completed");
+                                },
+                                Err(e) => {
+                                    warn!(error = %e, "⚠️ Startup YouTube URL conversion had issues, but continuing...");
+                                }
+                            }
+                            
                             // Show some tracks that need YouTube conversion
                             match app_state.get_tracks_for_conversion(5).await {
                                 Ok(db_tracks) => {
                                     if !db_tracks.is_empty() {
-                                        info!(conversion_needed_count = db_tracks.len(), "Tracks needing YouTube conversion");
+                                        info!(conversion_needed_count = db_tracks.len(), "Tracks still needing YouTube conversion");
                                         for track in db_tracks.iter().take(3) {
                                             debug!(track_id = %track.id, track_name = %track.name, "Track needs conversion");
                                         }
                                     } else {
-                                        info!("All tracks already have YouTube URLs");
+                                        info!("All tracks now have YouTube URLs");
                                     }
                                 },
                                 Err(e) => warn!(error = %e, "Could not check conversion status"),

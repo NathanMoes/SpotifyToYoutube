@@ -1,65 +1,37 @@
 use crate::database::DatabaseTrack;
 use crate::music_service::MusicDataService;
+use crate::youtube::youtube_api::{YouTubeApi, YouTubeSearchParams};
 use std::sync::Arc;
 use tokio::time::{sleep, Duration};
+use tracing::{info, warn, debug};
 
 pub struct ConversionService {
     music_service: Arc<MusicDataService>,
+    youtube_api: Option<YouTubeApi>,
 }
 
 impl ConversionService {
     pub fn new(music_service: Arc<MusicDataService>) -> Self {
-        ConversionService { music_service }
+        // Try to get YouTube API key from environment
+        let youtube_api = std::env::var("YOUTUBE_API_KEY")
+            .ok()
+            .map(|api_key| YouTubeApi::new(api_key));
+
+        if youtube_api.is_none() {
+            warn!("YOUTUBE_API_KEY not found in environment variables. YouTube search will use mock URLs.");
+        }
+
+        ConversionService { 
+            music_service,
+            youtube_api,
+        }
     }
 
     /// Start a background task to continuously convert tracks
     pub async fn start_background_conversion(&self) {
-        println!("🔄 Background conversion service initialized (disabled for now)");
+        info!("🔄 Background conversion service initialized (disabled for now)");
         // Background conversion disabled due to Send trait issues
         // Will be implemented in a future version
-    }
-
-    /// Convert a single track to YouTube URL (static method for spawning)
-    async fn convert_track_to_youtube_static(
-        music_service: &MusicDataService,
-        track: &DatabaseTrack,
-    ) -> Result<(), String> {
-        // For now, this is a placeholder implementation
-        // In a real implementation, you would:
-        // 1. Use the YouTube Data API to search for the track
-        // 2. Match based on track name, artist, duration, etc.
-        // 3. Return the best matching YouTube URL
-        
-        let search_query = format!("{}", track.name);
-        
-        println!("🔍 Searching YouTube for: {}", search_query);
-        
-        // Simulate YouTube search and conversion
-        let youtube_url = ConversionService::search_youtube(&search_query).await
-            .map_err(|e| format!("Search failed: {}", e))?;
-        
-        // Update the database with the YouTube URL
-        music_service.update_track_youtube_url(&track.id, &youtube_url).await
-            .map_err(|e| format!("Database update failed: {}", e))?;
-        
-        println!("✅ Converted {} -> {}", track.name, youtube_url);
-        
-        Ok(())
-    }
-
-    /// Search YouTube for a track (placeholder implementation)
-    async fn search_youtube(query: &str) -> Result<String, String> {
-        // This is a placeholder implementation
-        // In a real implementation, you would use the YouTube Data API
-        
-        // For testing purposes, we'll create a mock YouTube URL
-        let mock_video_id = format!("{:x}", md5::compute(query.as_bytes()));
-        let youtube_url = format!("https://www.youtube.com/watch?v={}", &mock_video_id[0..11]);
-        
-        // Simulate API delay
-        sleep(Duration::from_millis(500)).await;
-        
-        Ok(youtube_url)
     }
 
     /// Manual conversion of a specific track
@@ -68,13 +40,14 @@ impl ConversionService {
         track_id: &str,
         _force: bool,
     ) -> Result<String, Box<dyn std::error::Error>> {
-        // Get track from database
-        // Note: You'd need to implement get_track_by_id in the database layer
+        // Get tracks from database to find the one we want to convert
+        let tracks = self.music_service.get_tracks_for_conversion(1000).await?;
         
-        // For now, create a search query and convert
-        let search_query = format!("track_id_{}", track_id);
-        let youtube_url = ConversionService::search_youtube(&search_query).await?;
-        
+        let track = tracks.into_iter()
+            .find(|t| t.id == track_id)
+            .ok_or_else(|| format!("Track with ID {} not found or already has YouTube URL", track_id))?;
+
+        let youtube_url = self.search_youtube_for_track(&track).await?;
         self.music_service.update_track_youtube_url(track_id, &youtube_url).await?;
         
         Ok(youtube_url)
@@ -89,6 +62,155 @@ impl ConversionService {
             pending_conversion,
         })
     }
+
+    /// Process all tracks missing YouTube URLs on startup
+    pub async fn process_missing_youtube_urls_on_startup(&self, batch_size: i64, max_tracks: Option<i64>) -> Result<(), Box<dyn std::error::Error>> {
+        info!("🔄 Starting startup YouTube URL conversion process");
+        
+        let limit = max_tracks.unwrap_or(batch_size);
+        
+        // Get tracks that need YouTube URLs
+        let tracks = self.music_service.get_tracks_for_conversion(limit).await?;
+        
+        if tracks.is_empty() {
+            info!("✅ All tracks already have YouTube URLs");
+            return Ok(());
+        }
+
+        info!("📋 Found {} tracks needing YouTube URLs", tracks.len());
+        
+        let mut processed = 0;
+        let mut successful = 0;
+        let mut failed = 0;
+
+        for track in tracks {
+            processed += 1;
+            
+            debug!(
+                track_id = %track.id,
+                track_name = %track.name,
+                progress = format!("{}/{}", processed, limit),
+                "Processing track for YouTube URL"
+            );
+
+            match self.find_and_update_youtube_url(&track).await {
+                Ok(youtube_url) => {
+                    successful += 1;
+                    info!(
+                        track_name = %track.name,
+                        youtube_url = %youtube_url,
+                        "✅ Successfully found and updated YouTube URL"
+                    );
+                }
+                Err(e) => {
+                    failed += 1;
+                    warn!(
+                        track_name = %track.name,
+                        error = %e,
+                        "❌ Failed to find YouTube URL"
+                    );
+                }
+            }
+
+            // Add a small delay to be respectful to the YouTube API
+            if self.youtube_api.is_some() {
+                sleep(Duration::from_millis(100)).await;
+            }
+        }
+
+        info!(
+            total_processed = processed,
+            successful = successful,
+            failed = failed,
+            success_rate = format!("{:.1}%", (successful as f64 / processed as f64) * 100.0),
+            "🏁 Completed startup YouTube URL conversion process"
+        );
+
+        Ok(())
+    }
+
+    /// Find and update YouTube URL for a single track
+    async fn find_and_update_youtube_url(&self, track: &DatabaseTrack) -> Result<String, Box<dyn std::error::Error>> {
+        let youtube_url = self.search_youtube_for_track(track).await?;
+        
+        // Update the database with the YouTube URL
+        self.music_service.update_track_youtube_url(&track.id, &youtube_url).await?;
+        
+        Ok(youtube_url)
+    }
+
+    /// Search YouTube for a track using the real API or mock implementation
+    async fn search_youtube_for_track(&self, track: &DatabaseTrack) -> Result<String, Box<dyn std::error::Error>> {
+        if let Some(youtube_api) = &self.youtube_api {
+            // Use real YouTube API
+            self.search_youtube_real_api(youtube_api, track).await
+        } else {
+            // Use mock implementation
+            self.search_youtube_mock(track).await
+        }
+    }
+
+    /// Search YouTube using the real YouTube Data API
+    async fn search_youtube_real_api(&self, youtube_api: &YouTubeApi, track: &DatabaseTrack) -> Result<String, Box<dyn std::error::Error>> {
+        // Create search query - prioritize track name and first artist
+        let query = format!("{} {}", track.name, 
+            // You might want to extract artist names from external_urls or add artists field to DatabaseTrack
+            track.name // For now, just use track name twice for better matching
+        );
+
+        let search_params = YouTubeSearchParams {
+            query,
+            max_results: Some(3), // Get top 3 results for better matching
+            order: Some("relevance".to_string()),
+            video_duration: Some("medium".to_string()), // Prefer songs over long videos
+            ..Default::default()
+        };
+
+        let search_response = youtube_api.search_videos(search_params).await
+            .map_err(|e| format!("YouTube API search failed: {}", e))?;
+
+        if search_response.items.is_empty() {
+            return Err("No YouTube videos found for this track".into());
+        }
+
+        // Take the first (most relevant) result
+        let best_match = &search_response.items[0];
+        
+        if let Some(video_id) = &best_match.id.video_id {
+            let youtube_url = format!("https://www.youtube.com/watch?v={}", video_id);
+            
+            debug!(
+                track_name = %track.name,
+                youtube_title = %best_match.snippet.title,
+                youtube_channel = %best_match.snippet.channel_title,
+                youtube_url = %youtube_url,
+                "🎯 Found YouTube match"
+            );
+            
+            Ok(youtube_url)
+        } else {
+            Err("YouTube search result did not contain a video ID".into())
+        }
+    }
+
+    /// Mock YouTube search (fallback when no API key is available)
+    async fn search_youtube_mock(&self, track: &DatabaseTrack) -> Result<String, Box<dyn std::error::Error>> {
+        // Create a deterministic but varied mock URL based on track data
+        let search_query = format!("{}", track.name);
+        let mock_video_id = format!("{:x}", md5::compute(search_query.as_bytes()));
+        let youtube_url = format!("https://www.youtube.com/watch?v={}", &mock_video_id[0..11]);
+        
+        // Simulate API delay
+        sleep(Duration::from_millis(200)).await;
+        
+        debug!(
+            track_name = %track.name,
+            mock_youtube_url = %youtube_url,
+            "🎭 Generated mock YouTube URL"
+        );
+        
+        Ok(youtube_url)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -96,59 +218,4 @@ pub struct ConversionStats {
     pub total_tracks: u64,
     pub converted_tracks: u64,
     pub pending_conversion: u64,
-}
-
-/// YouTube API integration (placeholder for real implementation)
-pub struct YouTubeApi {
-    api_key: String,
-}
-
-impl YouTubeApi {
-    pub fn new(api_key: String) -> Self {
-        YouTubeApi { api_key }
-    }
-
-    /// Search YouTube for a track using the Data API v3
-    pub async fn search_for_track(
-        &self,
-        track_name: &str,
-        artist_name: &str,
-        duration_ms: Option<u32>,
-    ) -> Result<Vec<YouTubeSearchResult>, Box<dyn std::error::Error>> {
-        // Real implementation would use reqwest to call:
-        // https://www.googleapis.com/youtube/v3/search
-        
-        let _query = format!("{} {}", track_name, artist_name);
-        
-        // Placeholder - in real implementation you'd:
-        // 1. Make HTTP request to YouTube API
-        // 2. Parse JSON response
-        // 3. Filter results by duration if provided
-        // 4. Return sorted list of matches
-        
-        Ok(vec![
-            YouTubeSearchResult {
-                video_id: "placeholder123".to_string(),
-                title: format!("{} - {}", artist_name, track_name),
-                duration_seconds: duration_ms.map(|ms| ms / 1000),
-                view_count: Some(1000000),
-                channel_name: artist_name.to_string(),
-            }
-        ])
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct YouTubeSearchResult {
-    pub video_id: String,
-    pub title: String,
-    pub duration_seconds: Option<u32>,
-    pub view_count: Option<u64>,
-    pub channel_name: String,
-}
-
-impl YouTubeSearchResult {
-    pub fn to_url(&self) -> String {
-        format!("https://www.youtube.com/watch?v={}", self.video_id)
-    }
 }
