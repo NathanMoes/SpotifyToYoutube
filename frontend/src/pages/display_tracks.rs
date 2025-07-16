@@ -411,24 +411,28 @@ pub fn display_tracks() -> Html {
                                 {format!("Page {} of {}", *current_page, *total_pages)}
                             </div>
                             <div class="pagination-controls">
-                                {if *current_page > 1 {
-                                    html! {
-                                        <button onclick={{
-                                            let go_to_page = go_to_page.clone();
-                                            let page = *current_page - 1;
-                                            Callback::from(move |_| go_to_page.emit(page))
-                                        }} class="btn btn-secondary">
-                                            {"Previous"}
-                                        </button>
-                                    }
-                                } else {
-                                    html! {}
-                                }}
+                                <button 
+                                    class="btn btn-secondary"
+                                    disabled={*current_page == 1}
+                                    onclick={{
+                                        let go_to_page = go_to_page.clone();
+                                        let page = *current_page - 1;
+                                        Callback::from(move |_| {
+                                            if page >= 1 {
+                                                go_to_page.emit(page);
+                                            }
+                                        })
+                                    }}>
+                                    {"← Previous"}
+                                </button>
                                 
-                                // Page numbers (show up to 5 pages around current)
+                                // Page numbers (show smart pagination)
                                 {for (1..=*total_pages).filter(|&page| {
-                                    page == 1 || page == *total_pages || 
-                                    (page >= current_page.saturating_sub(2) && page <= *current_page + 2)
+                                    let current = *current_page;
+                                    let total = *total_pages;
+                                    // Always show first and last page, plus 2 pages around current
+                                    page == 1 || page == total || 
+                                    (page >= current.saturating_sub(1) && page <= current + 1)
                                 }).map(|page| {
                                     let is_current = page == *current_page;
                                     let go_to_page = go_to_page.clone();
@@ -436,27 +440,26 @@ pub fn display_tracks() -> Html {
                                     html! {
                                         <button 
                                             onclick={Callback::from(move |_| go_to_page.emit(page))}
-                                            class={if is_current { "btn btn-primary page-btn current" } else { "btn btn-secondary page-btn" }}
-                                            disabled={is_current}
-                                        >
+                                            class={if is_current { "btn btn-primary" } else { "btn btn-secondary" }}>
                                             {page}
                                         </button>
                                     }
                                 })}
 
-                                {if *current_page < *total_pages {
-                                    html! {
-                                        <button onclick={{
-                                            let go_to_page = go_to_page.clone();
-                                            let page = *current_page + 1;
-                                            Callback::from(move |_| go_to_page.emit(page))
-                                        }} class="btn btn-secondary">
-                                            {"Next"}
-                                        </button>
-                                    }
-                                } else {
-                                    html! {}
-                                }}
+                                <button 
+                                    class="btn btn-secondary"
+                                    disabled={*current_page == *total_pages}
+                                    onclick={{
+                                        let go_to_page = go_to_page.clone();
+                                        let page = *current_page + 1;
+                                        Callback::from(move |_| {
+                                            if page <= *total_pages {
+                                                go_to_page.emit(page);
+                                            }
+                                        })
+                                    }}>
+                                    {"Next →"}
+                                </button>
                             </div>
                         </div>
                     }

@@ -128,6 +128,11 @@ impl MusicDataService {
         self.db.get_playlist_tracks(playlist_id).await
     }
 
+    /// Get a specific track by ID
+    pub async fn get_track_by_id(&self, track_id: &str) -> Result<Option<DatabaseTrack>, Box<dyn std::error::Error>> {
+        self.db.get_track_by_id(track_id).await
+    }
+
     /// Search for tracks by name
     pub async fn search_tracks(&self, name: &str, limit: i64) -> Result<Vec<DatabaseTrack>, Box<dyn std::error::Error>> {
         self.db.search_tracks_by_name(name, limit).await

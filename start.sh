@@ -33,6 +33,27 @@ else
     COMPOSE_CMD="docker-compose"
 fi
 
+echo "Building and running backend service..."
+# Build the backend service
+cd backend || exit 1
+if ! cargo run --release; then
+    echo "❌ Failed to build the backend service."
+    exit 1
+fi
+cd ..
+
+echo "Backend service built successfully!"
+
+echo "🔧 Starting frontend"
+# Build and start the frontend service
+cd frontend || exit 1
+if ! wasm-pack build --target web --out-dir pkg; then
+    echo "❌ Failed to install frontend dependencies."
+    exit 1
+fi
+basic-http-server . 
+cd ..
+
 echo "🔧 Building and starting services..."
 
 # Build and start all services

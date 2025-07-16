@@ -491,6 +491,77 @@ impl SpotifyApi {
         Ok(playlist.tracks)
     }
 
+    /// Fetch all tracks from a playlist with pagination support
+    /// This method will make multiple API calls to get all tracks if the playlist has more than 100 tracks
+    pub async fn fetch_all_playlist_tracks(
+        &mut self,
+        playlist_id: &str,
+    ) -> Result<SpotifyPlaylist, SpotifyApiError> {
+        self.ensure_valid_token().await?;
+        
+        if let Some(token) = &self.access_token {
+            let client = reqwest::Client::new();
+            
+            // First, get the basic playlist info with the first batch of tracks
+            let response = client
+                .get(format!("https://api.spotify.com/v1/playlists/{}", playlist_id))
+                .bearer_auth(token)
+                .send()
+                .await?;
+
+            if !response.status().is_success() {
+                let status = response.status();
+                let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+                return Err(SpotifyApiError::AuthError(
+                    format!("The client is unauthorized due to authentication failure. Status: {}, Error: {}", status, error_text),
+                ));
+            }
+
+            let mut playlist = response.json::<SpotifyPlaylist>().await?;
+            
+            // If there are more tracks to fetch, get them via pagination
+            let mut next_url = playlist.tracks.next.clone();
+            while let Some(url) = next_url {
+                let response = client
+                    .get(&url)
+                    .bearer_auth(token)
+                    .send()
+                    .await?;
+
+                if !response.status().is_success() {
+                    let status = response.status();
+                    let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+                    return Err(SpotifyApiError::AuthError(
+                        format!("Failed to fetch additional tracks. Status: {}, Error: {}", status, error_text),
+                    ));
+                }
+
+                let additional_tracks = response.json::<SpotifyPlaylistTracks>().await?;
+                
+                // Append the new tracks to the existing ones
+                playlist.tracks.items.extend(additional_tracks.items);
+                
+                // Update the next URL for the next iteration
+                next_url = additional_tracks.next;
+                
+                // Add a small delay to avoid hitting rate limits
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+            }
+            
+            // Update the tracks info to reflect the complete data
+            playlist.tracks.limit = playlist.tracks.items.len() as u32;
+            playlist.tracks.offset = 0;
+            playlist.tracks.next = None;
+            playlist.tracks.previous = None;
+            
+            Ok(playlist)
+        } else {
+            Err(SpotifyApiError::InvalidData(
+                "No access token available".to_string(),
+            ))
+        }
+    }
+
     /// Get current token state for persistence
     pub fn get_token_state(&self) -> Option<TokenState> {
         if let (Some(access_token), Some(refresh_token)) = (&self.access_token, &self.refresh_token) {

@@ -92,7 +92,7 @@ impl AppState {
 
     pub async fn get_playlist_tracks(&self, playlist_id: &str) -> Result<SpotifyPlaylist, Box<dyn std::error::Error>> {
         let mut api = self.spotify_api.lock().await;
-        let tracks = api.fetch_playlist(playlist_id).await?;
+        let tracks = api.fetch_all_playlist_tracks(playlist_id).await?;
         Ok(tracks)
     }
 

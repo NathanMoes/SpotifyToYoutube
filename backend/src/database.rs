@@ -289,10 +289,40 @@ impl DatabaseManager {
         Ok(None)
     }
 
+    pub async fn get_track_by_id(&self, track_id: &str) -> Result<Option<DatabaseTrack>, Box<dyn std::error::Error>> {
+        let query = Query::new(
+            "MATCH (t:Track {id: $track_id})
+             RETURN t".to_string()
+        )
+        .param("track_id", track_id.to_string());
+
+        let mut result = self.graph.execute(query).await.map_err(|e| format!("Failed to get track by ID: {}", e))?;
+        
+        if let Some(row) = result.next().await.map_err(|e| format!("Failed to process query result: {}", e))? {
+            if let Ok(node) = row.get::<neo4rs::Node>("t") {
+                let track = DatabaseTrack {
+                    id: node.get::<String>("id").unwrap_or_default(),
+                    name: node.get::<String>("name").unwrap_or_default(),
+                    spotify_uri: node.get::<String>("spotify_uri").unwrap_or_default(),
+                    duration_ms: node.get::<i64>("duration_ms").unwrap_or(0) as u32,
+                    explicit: node.get::<bool>("explicit").unwrap_or(false),
+                    popularity: node.get::<i64>("popularity").unwrap_or(0) as u32,
+                    preview_url: node.get::<Option<String>>("preview_url").unwrap_or(None),
+                    external_urls: node.get::<String>("external_urls").unwrap_or_default(),
+                    youtube_url: node.get::<Option<String>>("youtube_url").unwrap_or(None),
+                    isrc: node.get::<Option<String>>("isrc").unwrap_or(None),
+                };
+                return Ok(Some(track));
+            }
+        }
+        
+        Ok(None)
+    }
+
     pub async fn find_tracks_without_youtube_url(&self, limit: i64) -> Result<Vec<DatabaseTrack>, Box<dyn std::error::Error>> {
         let query = Query::new(
             "MATCH (t:Track)
-             WHERE t.youtube_url IS NULL
+             WHERE t.youtube_url IS NULL OR t.youtube_url = ''
              RETURN t
              LIMIT $limit".to_string()
         )

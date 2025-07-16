@@ -283,7 +283,7 @@ impl DatabaseManager {
     pub async fn find_tracks_without_youtube_url(&self, limit: i64) -> Result<Vec<DatabaseTrack>> {
         let query = Query::new(
             "MATCH (t:Track)
-             WHERE t.youtube_url IS NULL
+             WHERE t.youtube_url IS NULL OR t.youtube_url = ''
              RETURN t
              LIMIT $limit"
         )

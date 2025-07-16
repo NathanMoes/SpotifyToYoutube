@@ -38,19 +38,30 @@ impl ConversionService {
     pub async fn convert_track_manually(
         &self,
         track_id: &str,
-        _force: bool,
+        force: bool,
     ) -> Result<String, Box<dyn std::error::Error>> {
-        // Get tracks from database to find the one we want to convert
-        let tracks = self.music_service.get_tracks_for_conversion(1000).await?;
-        
-        let track = tracks.into_iter()
-            .find(|t| t.id == track_id)
-            .ok_or_else(|| format!("Track with ID {} not found or already has YouTube URL", track_id))?;
+        if force {
+            // Force conversion - get the track directly from database regardless of YouTube URL status
+            let track = self.music_service.get_track_by_id(track_id).await?
+                .ok_or_else(|| format!("Track with ID {} not found", track_id))?;
+            
+            let youtube_url = self.search_youtube_for_track(&track).await?;
+            self.music_service.update_track_youtube_url(track_id, &youtube_url).await?;
+            
+            Ok(youtube_url)
+        } else {
+            // Normal conversion - only convert tracks without YouTube URLs
+            let tracks = self.music_service.get_tracks_for_conversion(1000).await?;
+            
+            let track = tracks.into_iter()
+                .find(|t| t.id == track_id)
+                .ok_or_else(|| format!("Track with ID {} not found or already has YouTube URL", track_id))?;
 
-        let youtube_url = self.search_youtube_for_track(&track).await?;
-        self.music_service.update_track_youtube_url(track_id, &youtube_url).await?;
-        
-        Ok(youtube_url)
+            let youtube_url = self.search_youtube_for_track(&track).await?;
+            self.music_service.update_track_youtube_url(track_id, &youtube_url).await?;
+            
+            Ok(youtube_url)
+        }
     }
 
     /// Get conversion statistics
@@ -96,11 +107,21 @@ impl ConversionService {
             match self.find_and_update_youtube_url(&track).await {
                 Ok(youtube_url) => {
                     successful += 1;
-                    info!(
-                        track_name = %track.name,
-                        youtube_url = %youtube_url,
-                        "✅ Successfully found and updated YouTube URL"
-                    );
+                    
+                    // Check if it was actually converted or skipped
+                    if track.youtube_url.is_some() && !track.youtube_url.as_ref().unwrap().is_empty() {
+                        debug!(
+                            track_name = %track.name,
+                            existing_url = %track.youtube_url.as_ref().unwrap(),
+                            "⏭️ Skipped track (already has YouTube URL)"
+                        );
+                    } else {
+                        info!(
+                            track_name = %track.name,
+                            youtube_url = %youtube_url,
+                            "✅ Successfully found and updated YouTube URL"
+                        );
+                    }
                 }
                 Err(e) => {
                     failed += 1;
@@ -131,6 +152,19 @@ impl ConversionService {
 
     /// Find and update YouTube URL for a single track
     async fn find_and_update_youtube_url(&self, track: &DatabaseTrack) -> Result<String, Box<dyn std::error::Error>> {
+        // Check if track already has a YouTube URL
+        if let Some(existing_url) = &track.youtube_url {
+            if !existing_url.is_empty() {
+                debug!(
+                    track_id = %track.id,
+                    track_name = %track.name,
+                    existing_url = %existing_url,
+                    "🔄 Track already has YouTube URL, skipping"
+                );
+                return Ok(existing_url.clone());
+            }
+        }
+        
         let youtube_url = self.search_youtube_for_track(track).await?;
         
         // Update the database with the YouTube URL

@@ -652,8 +652,8 @@ body {
 .modal-content {
     background: white;
     border-radius: 15px;
-    max-width: 800px;
-    max-height: 80vh;
+    max-width: 900px;
+    max-height: 85vh;
     width: 100%;
     overflow: hidden;
     box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
@@ -685,8 +685,10 @@ body {
 
 .modal-body {
     padding: 1.5rem;
-    max-height: 60vh;
+    max-height: 70vh;
     overflow-y: auto;
+    /* Add smooth scrolling for better UX */
+    scroll-behavior: smooth;
 }
 
 .playlist-tracks-list {
@@ -771,6 +773,52 @@ body {
     text-align: center;
     padding: 2rem;
     color: #666;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #1db954;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Tracks pagination styles (specific to modal) */
+.tracks-pagination {
+    margin-top: 1.5rem;
+    margin-bottom: 0;
+    padding: 1rem;
+    background: rgba(248, 250, 252, 0.8);
+    border-radius: 8px;
+}
+
+.tracks-pagination .pagination-info {
+    margin-bottom: 0.75rem;
+    font-size: 0.875rem;
+}
+
+.tracks-pagination .pagination-controls {
+    gap: 0.25rem;
+}
+
+.tracks-pagination .btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    min-width: 36px;
+    height: 36px;
+}
+
+.pagination-ellipsis {
+    padding: 0.375rem 0.5rem;
+    color: #6b7280;
+    font-weight: 500;
 }
 
 /* Responsive adjustments */

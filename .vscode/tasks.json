@@ -10,6 +10,16 @@
 			"problemMatcher": [
 				"$rustc"
 			]
+		},
+		{
+			"label": "Start Frontend",
+			"type": "shell",
+			"command": "cd frontend && wasm-pack build --target web --out-dir pkg && basic-http-server .",
+			"group": "build",
+			"isBackground": true,
+			"problemMatcher": [
+				"$rustc"
+			]
 		}
 	]
 }
